@@ -221,10 +221,17 @@ int main() {
                   <path d="M6 10l2.5 2.5L14 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
                 </svg>
               )}
-              {submissionStatus !== "accepted" && (
+              {submissionStatus === "pending" && (
+                <svg width="20" height="20" viewBox="0 0 50 50" fill="none" className="spinner-icon">
+                  <circle cx="25" cy="25" r="20" stroke="currentColor" strokeWidth="6" opacity="0.25"/>
+                  <path d="M45 25a20 20 0 0 1-20 20" stroke="currentColor" strokeWidth="6" strokeLinecap="round"/>
+                </svg>
+              )}
+              {submissionStatus && submissionStatus !== "accepted" && submissionStatus !== "pending" && (
                 <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
                   <circle cx="10" cy="10" r="9" stroke="currentColor" strokeWidth="2"/>
-                  <path d="M7 7l6 6M13 7l-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                  <path d="M10 5v6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                  <circle cx="10" cy="14" r="1.2" fill="currentColor" />
                 </svg>
               )}
               <span className="status-text">{statusMessage}</span>

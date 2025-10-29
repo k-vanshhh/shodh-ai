@@ -133,16 +133,11 @@ MongoDB:
 
 ## Screenshots
 
-Place screenshots in `public/screenshots/` and they will be served statically. Suggested shots:
 
 ![Home / Contest List](public/screenshots/home.png)
 ![Problem + Editor](public/screenshots/editor.png)
 ![Leaderboard](public/screenshots/leaderboard.png)
 
-Tips
-- Prefer 1280×720 or similar, light/dark mode both acceptable.
-- Blur or omit any sensitive data (emails, tokens, IDs).
-- Keep filenames lowercase, hyphenated if needed.
 
 ## API overview
 

@@ -213,7 +213,7 @@
   color: #00b8a3;
 }
 
-.result-panel:not(.accepted) .result-status svg {
+.result-panel:not(.accepted):not(.pending) .result-status svg {
   color: #ef4444;
 }
 
@@ -227,8 +227,27 @@
   color: #00b8a3;
 }
 
-.result-panel:not(.accepted) .status-text {
+.result-panel:not(.accepted):not(.pending) .status-text {
   color: #ef4444;
+}
+
+/* Pending (submitting/running) state: neutral color + spinner animation */
+.result-panel.pending .result-status svg {
+  color: #e8e8e8;
+}
+
+.result-panel.pending .status-text {
+  color: #e8e8e8;
+}
+
+.spinner-icon {
+  transform-origin: 50% 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 .dismiss-btn {
