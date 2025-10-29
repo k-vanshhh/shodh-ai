@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo, useRef } from "react"
 import "../styles/CodeEditor.css"
 
 function CodeEditor({ problem, contestId, username, apiUrl, onSubmissionComplete }) {
@@ -20,6 +20,9 @@ int main() {
   const [statusMessage, setStatusMessage] = useState("")
   const [submissionDetails, setSubmissionDetails] = useState(null)
   const [pollCount, setPollCount] = useState(0)
+  const textAreaRef = useRef(null)
+  const lineNumbersRef = useRef(null)
+  const lineCount = useMemo(() => (String(code || "").split('\n').length || 1), [code])
 
   const languageTemplates = {
     python: `# Write your code here
@@ -120,6 +123,14 @@ int main() {
     setSubmissionDetails(null)
   }
 
+  const handleScrollSync = (e) => {
+    try {
+      if (lineNumbersRef.current) {
+        lineNumbersRef.current.scrollTop = e.target.scrollTop
+      }
+    } catch (_) {}
+  }
+
   const handleLanguageChange = (e) => {
     const nextLang = e.target.value
     if (submitting || !!submissionId) return
@@ -179,14 +190,25 @@ int main() {
       </div>
 
       <div className="editor-body">
-        <textarea
-          value={code}
-          onChange={(e) => setCode(e.target.value)}
-          className="editor-textarea"
-          placeholder={`Write your ${language} code here...`}
-          disabled={submitting || !!submissionId}
-          spellCheck="false"
-        />
+        <div className="editor-wrapper">
+          <div className="line-numbers" ref={lineNumbersRef} aria-hidden="true">
+            <div className="line-numbers-inner">
+              {Array.from({ length: lineCount }).map((_, i) => (
+                <div className="line-number" key={i}>{i + 1}</div>
+              ))}
+            </div>
+          </div>
+          <textarea
+            ref={textAreaRef}
+            value={code}
+            onChange={(e) => setCode(e.target.value)}
+            onScroll={handleScrollSync}
+            className="editor-textarea"
+            placeholder={`Write your ${language} code here...`}
+            disabled={submitting || !!submissionId}
+            spellCheck="false"
+          />
+        </div>
       </div>
 
       {submissionStatus && (

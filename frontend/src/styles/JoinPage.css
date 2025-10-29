@@ -193,8 +193,16 @@
   }
   
   .form-group input:disabled {
-    opacity: 0.5;
+    opacity: 0.6;
     cursor: not-allowed;
+    background: #262626;
+    color: #9aa0a6;
+  }
+
+  /* readonly contest code visual */
+  .input-readonly:disabled {
+    border-style: dashed;
+    border-color: #444;
   }
   
   .selected-contest-badge {

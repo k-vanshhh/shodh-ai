@@ -76,6 +76,14 @@
   color: #e8e8e8;
 }
 
+/* Color the leaderboard icon */
+.leaderboard-toggle svg {
+  color: #f59e0b; /* amber */
+}
+.leaderboard-toggle:hover svg {
+  color: #ffb03a;
+}
+
 .username {
   padding: 6px 12px;
   background: #3a3a3a;
@@ -99,6 +107,25 @@
 .leave-btn:hover {
   background: #4a4a4a;
   border-color: #5a5a5a;
+}
+
+/* Red finish button */
+.finish-btn {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  border-color: #dc2626;
+}
+.finish-btn:hover {
+  background: linear-gradient(135deg, #f05252, #e11d48);
+  border-color: #e11d48;
+}
+
+/* Candidate badge next to title */
+.candidate {
+  padding: 6px 12px;
+  background: #3a3a3a;
+  border-radius: 6px;
+  font-size: 13px;
+  color: #e8e8e8;
 }
 
 /* Main Layout */

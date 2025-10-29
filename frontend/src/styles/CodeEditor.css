@@ -122,6 +122,34 @@
   display: flex;
 }
 
+.editor-wrapper {
+  display: flex;
+  height: 100%;
+  width: 100%;
+  min-height: 220px;
+}
+
+.line-numbers {
+  width: 48px;
+  background: #141421;
+  color: rgba(255,255,255,0.4);
+  border-right: 1px solid #3a3a3a;
+  user-select: none;
+  overflow: hidden;
+}
+
+.line-numbers-inner {
+  padding: 20px 8px;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.line-number {
+  text-align: right;
+  height: calc(1.6em);
+}
+
 .editor-textarea {
   flex: 1;
   padding: 20px;

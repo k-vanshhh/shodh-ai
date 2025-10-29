@@ -206,13 +206,10 @@ function JoinPage({ onJoin }) {
                       type="text"
                       id="contestCode"
                       value={contestCode}
-                      readOnly
+                      disabled
                       placeholder="Select a contest from the left"
                       className="input-readonly"
                     />
-                    {contestCode && (
-                      <span className="input-checkmark">✓</span>
-                    )}
                   </div>
                   
                 </div>

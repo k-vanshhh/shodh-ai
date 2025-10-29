@@ -115,6 +115,8 @@ function ContestPage({ data, onLeave }) {
           <div className="logo">Contest</div>
           <div className="divider"></div>
           <h1>{data.contest?.title || 'Coding Challenge'}</h1>
+          <div className="divider"></div>
+          <span className="candidate">Candidate: {data.username}</span>
         </div>
         <div className="header-right">
           <button 
@@ -126,9 +128,8 @@ function ContestPage({ data, onLeave }) {
             </svg>
             Leaderboard
           </button>
-          <span className="username">{data.username}</span>
-          <button onClick={requestLeave} className="leave-btn">
-            Finish Contest
+          <button onClick={requestLeave} className="leave-btn finish-btn">
+            Finish
           </button>
         </div>
       </header>
