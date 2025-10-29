@@ -1,101 +1,324 @@
+/* CodeEditor.css - Next-Gen Professional Design */
+
 .code-editor {
   display: flex;
   flex-direction: column;
-  height: 100%;
-  border-top: 1px solid #e0e0e0;
+  height: 50vh;
+  background: linear-gradient(to bottom, rgba(15, 15, 30, 0.8) 0%, rgba(20, 20, 35, 0.5) 100%);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
+/* Premium Editor Header */
 .editor-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 15px 20px;
-  background-color: #f9f9f9;
-  border-bottom: 1px solid #e0e0e0;
+  padding: 14px 24px;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.15) 100%);
+  border-bottom: 1px solid rgba(102, 126, 234, 0.2);
+  backdrop-filter: blur(10px);
 }
 
 .editor-header h3 {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.9);
   margin: 0;
-  color: #333;
-  font-size: 16px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
-.submit-btn {
-  padding: 8px 16px;
-  background-color: #667eea;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
+.editor-header h3::before {
+  content: '</>';
+  font-size: 16px;
+  color: #667eea;
   font-weight: 600;
-  transition: background-color 0.3s;
+  font-family: 'Fira Code', monospace;
+}
+
+/* Modern Submit Button */
+.submit-btn {
+  padding: 9px 28px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.3);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  position: relative;
+  overflow: hidden;
+}
+
+.submit-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+  transition: left 0.5s;
+}
+
+.submit-btn:hover:not(:disabled)::before {
+  left: 100%;
 }
 
 .submit-btn:hover:not(:disabled) {
-  background-color: #764ba2;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(102, 126, 234, 0.5);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.submit-btn:active:not(:disabled) {
+  transform: translateY(0);
 }
 
 .submit-btn:disabled {
-  opacity: 0.6;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.3) 0%, rgba(118, 75, 162, 0.3) 100%);
+  cursor: not-allowed;
+  opacity: 0.5;
+  box-shadow: none;
+}
+
+/* Status-based styling */
+.submit-btn.accepted {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.4);
+  animation: successPulse 0.6s ease;
+}
+
+.submit-btn.wrong_answer,
+.submit-btn.compilation_error,
+.submit-btn.runtime_error,
+.submit-btn.time_limit_exceeded {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  box-shadow: 0 4px 16px rgba(239, 68, 68, 0.4);
+  animation: errorShake 0.5s ease;
+}
+
+@keyframes successPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+@keyframes errorShake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+
+/* Premium Code Editor */
+.editor-textarea {
+  flex: 1;
+  padding: 20px;
+  font-family: 'Fira Code', 'JetBrains Mono', 'Consolas', monospace;
+  font-size: 14px;
+  line-height: 1.6;
+  border: none;
+  resize: none;
+  outline: none;
+  background: linear-gradient(135deg, #0a0a15 0%, #1a1a2e 100%);
+  color: #e0e0e0;
+  overflow-y: auto;
+  tab-size: 4;
+}
+
+.editor-textarea::placeholder {
+  color: rgba(102, 126, 234, 0.4);
+  font-style: italic;
+}
+
+.editor-textarea:disabled {
+  opacity: 0.5;
   cursor: not-allowed;
 }
 
-.submit-btn.accepted {
-  background-color: #27ae60;
+.editor-textarea::-webkit-scrollbar {
+  width: 8px;
 }
 
-.submit-btn.wrong_answer {
-  background-color: #e74c3c;
+.editor-textarea::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.02);
 }
 
-.submit-btn.runtime_error {
-  background-color: #e67e22;
+.editor-textarea::-webkit-scrollbar-thumb {
+  background: rgba(102, 126, 234, 0.3);
+  border-radius: 4px;
 }
 
-.submit-btn.compilation_error {
-  background-color: #c0392b;
+.editor-textarea::-webkit-scrollbar-thumb:hover {
+  background: rgba(102, 126, 234, 0.5);
 }
 
-.editor-textarea {
-  flex: 1;
-  padding: 15px;
-  border: none;
-  font-family: "Courier New", monospace;
-  font-size: 14px;
-  resize: none;
-  background-color: #f5f5f5;
-  color: #333;
-}
-
-.editor-textarea:focus {
-  outline: none;
-  background-color: white;
-}
-
+/* Modern Status Messages */
 .status-message {
-  padding: 12px 20px;
+  padding: 16px 24px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 13px;
   font-weight: 600;
-  text-align: center;
-  border-top: 1px solid #e0e0e0;
+  background: rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  animation: slideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  backdrop-filter: blur(10px);
 }
 
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.status-message > div:first-child {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 14px;
+}
+
+/* Success Status */
 .status-message.accepted {
-  background-color: #d5f4e6;
-  color: #27ae60;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(5, 150, 105, 0.15) 100%);
+  color: #10b981;
+  border-left: 3px solid #10b981;
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.2);
 }
 
-.status-message.wrong_answer {
-  background-color: #fadbd8;
-  color: #e74c3c;
+.status-message.accepted > div:first-child::before {
+  content: '✓';
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  border-radius: 50%;
+  font-weight: bold;
+  font-size: 14px;
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.5);
 }
 
-.status-message.runtime_error {
-  background-color: #fdebd0;
-  color: #e67e22;
+/* Error Status */
+.status-message.wrong_answer,
+.status-message.compilation_error,
+.status-message.runtime_error,
+.status-message.time_limit_exceeded {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(220, 38, 38, 0.15) 100%);
+  color: #ef4444;
+  border-left: 3px solid #ef4444;
+  box-shadow: 0 0 20px rgba(239, 68, 68, 0.2);
 }
 
-.status-message.compilation_error {
-  background-color: #f5b7b1;
-  color: #c0392b;
+.status-message.wrong_answer > div:first-child::before,
+.status-message.compilation_error > div:first-child::before,
+.status-message.runtime_error > div:first-child::before,
+.status-message.time_limit_exceeded > div:first-child::before {
+  content: '✗';
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: white;
+  border-radius: 50%;
+  font-weight: bold;
+  font-size: 14px;
+  box-shadow: 0 0 12px rgba(239, 68, 68, 0.5);
+}
+
+/* Pending Status */
+.status-message.pending {
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.15) 0%, rgba(245, 158, 11, 0.15) 100%);
+  color: #fbbf24;
+  border-left: 3px solid #fbbf24;
+  box-shadow: 0 0 20px rgba(251, 191, 36, 0.2);
+}
+
+.status-message.pending > div:first-child::before {
+  content: '⏳';
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  font-size: 14px;
+}
+
+/* Detail Text */
+.detail-text {
+  font-size: 12px;
+  font-weight: 500;
+  padding: 12px 16px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 6px;
+  font-family: 'Fira Code', 'Consolas', monospace;
+  margin-top: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  line-height: 1.5;
+  overflow-x: auto;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.detail-text::-webkit-scrollbar {
+  height: 5px;
+}
+
+.detail-text::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+}
+
+.detail-text::-webkit-scrollbar-thumb {
+  background: rgba(102, 126, 234, 0.4);
+  border-radius: 10px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .code-editor {
+    height: 60vh;
+  }
+
+  .editor-header {
+    flex-direction: column;
+    gap: 12px;
+    padding: 14px 18px;
+  }
+
+  .submit-btn {
+    width: 100%;
+    padding: 11px;
+  }
+
+  .editor-textarea {
+    padding: 16px;
+    font-size: 13px;
+  }
+
+  .status-message {
+    padding: 14px 18px;
+    font-size: 12px;
+  }
+
+  .detail-text {
+    font-size: 11px;
+    padding: 10px 14px;
+  }
 }

@@ -5,6 +5,8 @@ const dotenv = require("dotenv")
 const { spawn } = require("child_process")
 const path = require("path")
 const fs = require("fs")
+const jwt = require("jsonwebtoken")
+const bcrypt = require("bcryptjs")
 
 dotenv.config()
 
@@ -23,8 +25,15 @@ mongoose
   .then(() => console.log("MongoDB connected"))
   .catch((err) => console.log("MongoDB connection error:", err))
 
-// Models
+const userSchema = new mongoose.Schema({
+  email: { type: String, unique: true, required: true },
+  username: { type: String, unique: true, required: true },
+  password: { type: String, required: true },
+  createdAt: { type: Date, default: Date.now },
+})
+
 const contestSchema = new mongoose.Schema({
+  shortId: { type: Number, index: true },
   title: String,
   description: String,
   startTime: Date,
@@ -71,11 +80,87 @@ const submissionSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
 })
 
+const User = mongoose.model("User", userSchema)
 const Contest = mongoose.model("Contest", contestSchema)
 const Problem = mongoose.model("Problem", problemSchema)
 const Submission = mongoose.model("Submission", submissionSchema)
 
+const authenticateToken = (req, res, next) => {
+  const authHeader = req.headers["authorization"]
+  const token = authHeader && authHeader.split(" ")[1]
+
+  if (!token) return res.status(401).json({ error: "Access token required" })
+
+  jwt.verify(token, process.env.JWT_SECRET || "your-secret-key", (err, user) => {
+    if (err) return res.status(403).json({ error: "Invalid token" })
+    req.user = user
+    next()
+  })
+}
+
 // Routes
+
+// Register
+app.post("/api/auth/register", async (req, res) => {
+  try {
+    const { email, username, password } = req.body
+
+    if (!email || !username || !password) {
+      return res.status(400).json({ error: "All fields are required" })
+    }
+
+    const existingUser = await User.findOne({ $or: [{ email }, { username }] })
+    if (existingUser) {
+      return res.status(400).json({ error: "Email or username already exists" })
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10)
+    const user = new User({ email, username, password: hashedPassword })
+    await user.save()
+
+    const token = jwt.sign({ userId: user._id, username: user.username }, process.env.JWT_SECRET || "your-secret-key", {
+      expiresIn: "7d",
+    })
+
+    res.status(201).json({ token, user: { id: user._id, email: user.email, username: user.username } })
+  } catch (error) {
+    res.status(500).json({ error: error.message })
+  }
+})
+
+// Login
+app.post("/api/auth/login", async (req, res) => {
+  try {
+    const { email, password } = req.body
+
+    if (!email || !password) {
+      return res.status(400).json({ error: "Email and password are required" })
+    }
+
+    const user = await User.findOne({ email })
+    if (!user) {
+      return res.status(401).json({ error: "Invalid email or password" })
+    }
+
+    const isPasswordValid = await bcrypt.compare(password, user.password)
+    if (!isPasswordValid) {
+      return res.status(401).json({ error: "Invalid email or password" })
+    }
+
+    const token = jwt.sign({ userId: user._id, username: user.username }, process.env.JWT_SECRET || "your-secret-key", {
+      expiresIn: "7d",
+    })
+
+    res.json({ token, user: { id: user._id, email: user.email, username: user.username } })
+  } catch (error) {
+    res.status(500).json({ error: error.message })
+  }
+})
+
+// Verify token
+app.get("/api/auth/verify", authenticateToken, (req, res) => {
+  res.json({ user: req.user })
+})
 
 // Get all contests
 app.get("/api/contests", async (req, res) => {
@@ -90,7 +175,28 @@ app.get("/api/contests", async (req, res) => {
 // Get contest by ID
 app.get("/api/contests/:id", async (req, res) => {
   try {
-    const contest = await Contest.findById(req.params.id)
+    const { id } = req.params
+    let contest = null
+
+    if (/^\d+$/.test(id)) {
+      contest = await Contest.findOne({ shortId: Number(id) })
+    } else if (mongoose.isValidObjectId(id)) {
+      contest = await Contest.findById(id)
+    }
+
+    if (!contest) return res.status(404).json({ error: "Contest not found" })
+    res.json(contest)
+  } catch (error) {
+    res.status(500).json({ error: error.message })
+  }
+})
+
+// Lookup by short numeric id explicitly
+app.get("/api/contests/short/:shortId", async (req, res) => {
+  try {
+    const n = Number(req.params.shortId)
+    if (!Number.isFinite(n)) return res.status(400).json({ error: "Invalid shortId" })
+    const contest = await Contest.findOne({ shortId: n })
     if (!contest) return res.status(404).json({ error: "Contest not found" })
     res.json(contest)
   } catch (error) {
@@ -291,19 +397,19 @@ function runCommand(command, args, cwd, input = "") {
 // Seed database
 async function seedDatabase() {
   try {
-    const existingContest = await Contest.findOne()
-    if (existingContest) return
+    const existing = await Contest.find()
+    if (existing.length === 0) {
+      const contest1 = new Contest({
+        shortId: 1,
+        title: "Shodh-a-Code Contest 1",
+        description: "Welcome to the first Shodh-a-Code contest!",
+        startTime: new Date(),
+        endTime: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      })
 
-    const contest = new Contest({
-      title: "Shodh-a-Code Contest 1",
-      description: "Welcome to the first Shodh-a-Code contest!",
-      startTime: new Date(),
-      endTime: new Date(Date.now() + 24 * 60 * 60 * 1000),
-    })
+      const savedContest = await contest1.save()
 
-    const savedContest = await contest.save()
-
-    const problems = [
+      const problems = [
       {
         contestId: savedContest._id,
         title: "Sum of Two Numbers",
@@ -355,10 +461,58 @@ async function seedDatabase() {
           { input: "a", output: "YES" },
         ],
       },
-    ]
+      ]
 
-    await Problem.insertMany(problems)
-    console.log("Database seeded successfully")
+      await Problem.insertMany(problems)
+      console.log("Database seeded successfully")
+    }
+
+    // Ensure at least three contests exist with basic problems
+    const count = await Contest.countDocuments()
+    if (count < 3) {
+      const toCreate = []
+      for (let i = count + 1; i <= 3; i++) {
+        toCreate.push({
+          shortId: i,
+          title: `Shodh-a-Code Contest ${i}`,
+          description: `Mock contest ${i} with sample problems`,
+          startTime: new Date(),
+          endTime: new Date(Date.now() + 48 * 60 * 60 * 1000),
+        })
+      }
+      const created = await Contest.insertMany(toCreate)
+      for (const c of created) {
+        const sampleProblems = [
+          {
+            contestId: c._id,
+            title: "Array Max",
+            description: "Output the maximum element in the array.",
+            inputFormat: "n followed by n integers",
+            outputFormat: "Single integer",
+            constraints: "1 <= n <= 1e5",
+            examples: [{ input: "5\n1 4 2 9 3", output: "9" }],
+            testCases: [
+              { input: "3\n-1 -5 -3", output: "-1" },
+              { input: "4\n10 2 8 6", output: "10" },
+            ],
+          },
+          {
+            contestId: c._id,
+            title: "String Reverse",
+            description: "Reverse a given string.",
+            inputFormat: "A single string",
+            outputFormat: "Reversed string",
+            constraints: "1 <= length <= 1000",
+            examples: [{ input: "hello", output: "olleh" }],
+            testCases: [
+              { input: "racecar", output: "racecar" },
+              { input: "abcd", output: "dcba" },
+            ],
+          },
+        ]
+        await Problem.insertMany(sampleProblems)
+      }
+    }
   } catch (error) {
     console.log("Seeding error:", error.message)
   }
