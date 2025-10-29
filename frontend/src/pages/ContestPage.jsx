@@ -47,8 +47,11 @@ function ContestPage({ data, onLeave }) {
         throw new Error(`Failed to fetch leaderboard: ${response.status}`)
       }
       
-      const leaderboardData = await response.json()
-      setLeaderboard(Array.isArray(leaderboardData) ? leaderboardData : [])
+      const payload = await response.json()
+      const list = Array.isArray(payload)
+        ? payload
+        : (payload && Array.isArray(payload.leaderboard) ? payload.leaderboard : [])
+      setLeaderboard(list)
     } catch (error) {
       console.error("Error fetching leaderboard:", error)
       // Don't show error for leaderboard as it's less critical
@@ -136,6 +139,7 @@ function ContestPage({ data, onLeave }) {
                   contestId={data.contestId} 
                   username={data.username}
                   apiUrl={API_URL}
+                  onSubmissionComplete={fetchLeaderboard}
                 />
               </>
             ) : (

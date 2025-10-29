@@ -33,26 +33,84 @@ A comprehensive full-stack coding contest platform featuring real-time code exec
 ## Setup Instructions
 
 ### Prerequisites
-- Docker and Docker Compose
-- Git
+- **Docker Desktop** (Docker and Docker Compose included)
+- **Git** (optional, if cloning from repository)
 
-### Quick Start
+### Quick Start (Recommended)
 
-1. **Clone the repository**
-   \`\`\`bash
-   git clone <repository-url>
-   cd shodh-a-code-platform
-   \`\`\`
+#### Windows
+1. **Ensure Docker Desktop is running**
+   - Open Docker Desktop application
+   - Wait for it to fully start (whale icon should be steady in system tray)
 
-2. **Start all services**
-   \`\`\`bash
-   docker-compose up --build
-   \`\`\`
+2. **Build and start all services**
+   ```powershell
+   .\build-and-run.bat
+   ```
+   
+   Or manually:
+   ```powershell
+   # Build judge image first
+   docker build -t shodh-judge -f backend/judge/Dockerfile backend/judge/
+   
+   # Start all services
+   docker-compose up --build -d
+   ```
+
+#### Linux/Mac
+1. **Ensure Docker is running**
+   ```bash
+   docker info
+   ```
+
+2. **Build and start all services**
+   ```bash
+   chmod +x build-and-run.sh
+   ./build-and-run.sh
+   ```
+   
+   Or manually:
+   ```bash
+   # Build judge image first
+   docker build -t shodh-judge -f backend/judge/Dockerfile backend/judge/
+   
+   # Start all services
+   docker-compose up --build -d
+   ```
 
 3. **Access the application**
-   - Frontend: http://localhost:3000
-   - Backend API: http://localhost:5000
-   - MongoDB: localhost:27017
+   - 🌐 **Frontend**: http://localhost:3000
+   - 🔧 **Backend API**: http://localhost:5000
+   - 🗄️ **MongoDB**: localhost:27017
+
+### Managing Services
+
+**View logs:**
+```bash
+docker-compose logs -f
+```
+
+**View specific service logs:**
+```bash
+docker-compose logs -f backend
+docker-compose logs -f frontend
+docker-compose logs -f mongo
+```
+
+**Stop all services:**
+```bash
+docker-compose down
+```
+
+**Stop and remove volumes (clean reset):**
+```bash
+docker-compose down -v
+```
+
+**Restart services:**
+```bash
+docker-compose restart
+```
 
 ### Manual Setup (Without Docker)
 

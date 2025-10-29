@@ -7,10 +7,14 @@ const path = require("path")
 const fs = require("fs")
 const jwt = require("jsonwebtoken")
 const bcrypt = require("bcryptjs")
+const DockerExecutionService = require("./services/dockerExecutionService")
 
 dotenv.config()
 
 const app = express()
+
+// Initialize Docker execution service
+const dockerExecutionService = new DockerExecutionService()
 
 // Middleware
 app.use(cors())
@@ -71,12 +75,20 @@ const submissionSchema = new mongoose.Schema({
   language: String,
   status: {
     type: String,
-    enum: ["pending", "accepted", "wrong_answer", "runtime_error", "compilation_error"],
+    enum: ["pending", "accepted", "wrong_answer", "runtime_error", "compilation_error", "time_limit_exceeded", "unsupported_language"],
     default: "pending",
   },
   output: String,
   error: String,
   executionTime: Number,
+  memoryUsed: String,
+  testCaseResults: [{
+    input: String,
+    expectedOutput: String,
+    actualOutput: String,
+    passed: Boolean,
+    executionTime: Number
+  }],
   createdAt: { type: Date, default: Date.now },
 })
 
@@ -242,7 +254,7 @@ app.post("/api/submissions", async (req, res) => {
     await submission.save()
 
     // Execute code asynchronously
-    executeCode(submission._id, code, problemId)
+    executeCode(submission._id, code, problemId, language)
 
     res.status(201).json(submission)
   } catch (error) {
@@ -261,99 +273,188 @@ app.get("/api/submissions/:id", async (req, res) => {
   }
 })
 
+// Get submissions for a user in a contest
+app.get("/api/contests/:contestId/submissions/:username", async (req, res) => {
+  try {
+    const { contestId, username } = req.params
+    const submissions = await Submission.find({ contestId, username })
+      .populate("problemId", "title")
+      .sort({ createdAt: -1 })
+    res.json(submissions)
+  } catch (error) {
+    res.status(500).json({ error: error.message })
+  }
+})
+
+// Get all submissions for a contest (for admin/debugging)
+app.get("/api/contests/:contestId/submissions", async (req, res) => {
+  try {
+    const submissions = await Submission.find({ contestId: req.params.contestId })
+      .populate("problemId", "title")
+      .sort({ createdAt: -1 })
+    res.json(submissions)
+  } catch (error) {
+    res.status(500).json({ error: error.message })
+  }
+})
+
 // Get leaderboard for a contest
 app.get("/api/contests/:contestId/leaderboard", async (req, res) => {
   try {
     const submissions = await Submission.find({ contestId: req.params.contestId })
+      .populate("problemId", "title")
 
     const leaderboard = {}
+    const problemCount = await Problem.countDocuments({ contestId: req.params.contestId })
+
     submissions.forEach((sub) => {
       if (!leaderboard[sub.username]) {
         leaderboard[sub.username] = {
           username: sub.username,
           solved: 0,
           totalTime: 0,
+          totalSubmissions: 0,
+          solvedProblems: new Set(),
           submissions: [],
         }
       }
 
-      if (sub.status === "accepted") {
+      leaderboard[sub.username].totalSubmissions++
+
+      if (sub.status === "accepted" && !leaderboard[sub.username].solvedProblems.has(sub.problemId.toString())) {
         leaderboard[sub.username].solved++
+        leaderboard[sub.username].solvedProblems.add(sub.problemId.toString())
         leaderboard[sub.username].totalTime += sub.createdAt.getTime()
       }
 
       leaderboard[sub.username].submissions.push({
         problemId: sub.problemId,
+        problemTitle: sub.problemId.title,
         status: sub.status,
         time: sub.createdAt,
+        executionTime: sub.executionTime,
       })
     })
 
-    const result = Object.values(leaderboard).sort((a, b) => b.solved - a.solved || a.totalTime - b.totalTime)
+    const result = Object.values(leaderboard).map(user => ({
+      username: user.username,
+      solved: user.solved,
+      totalSubmissions: user.totalSubmissions,
+      totalTime: user.totalTime,
+      submissions: user.submissions.sort((a, b) => b.time - a.time), // Most recent first
+    })).sort((a, b) => {
+      // Sort by solved problems (desc), then by total time (asc), then by username (asc)
+      if (b.solved !== a.solved) return b.solved - a.solved
+      if (a.totalTime !== b.totalTime) return a.totalTime - b.totalTime
+      return a.username.localeCompare(b.username)
+    })
 
-    res.json(result)
+    res.json({
+      leaderboard: result,
+      totalProblems: problemCount,
+      totalParticipants: result.length
+    })
   } catch (error) {
     res.status(500).json({ error: error.message })
   }
 })
 
-// Code execution function
-async function executeCode(submissionId, code, problemId) {
+// Docker-based code execution function
+async function executeCode(submissionId, code, problemId, language = "java") {
   try {
     const problem = await Problem.findById(problemId)
-    const testCases = problem.testCases
-
-    const tempDir = path.join("/tmp", `submission_${submissionId}`)
-    if (!fs.existsSync(tempDir)) {
-      fs.mkdirSync(tempDir, { recursive: true })
-    }
-
-    const javaFile = path.join(tempDir, "Solution.java")
-    fs.writeFileSync(javaFile, code)
-
-    // Compile
-    const compileResult = await runCommand("javac", [javaFile], tempDir)
-
-    if (compileResult.error) {
+    if (!problem) {
       await Submission.findByIdAndUpdate(submissionId, {
-        status: "compilation_error",
-        error: compileResult.error,
+        status: "runtime_error",
+        error: "Problem not found",
       })
       return
     }
 
-    // Run test cases
+    const testCases = problem.testCases
+    const testCaseResults = []
     let allPassed = true
+    let finalStatus = "accepted"
     let lastOutput = ""
     let lastError = ""
+    let totalExecutionTime = 0
 
-    for (const testCase of testCases) {
-      const result = await runCommand("java", ["-cp", tempDir, "Solution"], tempDir, testCase.input)
+    // Check Docker availability
+    const dockerAvailable = await dockerExecutionService.checkDockerAvailability()
+    if (!dockerAvailable) {
+      await Submission.findByIdAndUpdate(submissionId, {
+        status: "runtime_error",
+        error: "Docker execution environment not available",
+      })
+      return
+    }
 
-      if (result.error) {
+    // Execute each test case
+    for (let i = 0; i < testCases.length; i++) {
+      const testCase = testCases[i]
+      
+      try {
+        const result = await dockerExecutionService.executeCode(
+          code,
+          language,
+          testCase.input,
+          {
+            submissionId: `${submissionId}_${i}`,
+            timeLimit: 5, // 5 seconds per test case
+            memoryLimit: "128m"
+          }
+        )
+
+        const testCaseResult = {
+          input: testCase.input,
+          expectedOutput: testCase.output,
+          actualOutput: result.output,
+          passed: result.status === "accepted" && result.output.trim() === testCase.output.trim(),
+          executionTime: result.executionTime
+        }
+
+        testCaseResults.push(testCaseResult)
+        totalExecutionTime += result.executionTime
+
+        if (!testCaseResult.passed) {
+          allPassed = false
+          lastOutput = result.output
+          lastError = result.error
+          
+          if (result.status !== "accepted") {
+            finalStatus = result.status
+            break
+          } else {
+            finalStatus = "wrong_answer"
+            break
+          }
+        }
+      } catch (error) {
         allPassed = false
-        lastError = result.error
-        break
-      }
-
-      if (result.output.trim() !== testCase.output.trim()) {
-        allPassed = false
-        lastOutput = result.output
+        finalStatus = "runtime_error"
+        lastError = error.message
+        testCaseResults.push({
+          input: testCase.input,
+          expectedOutput: testCase.output,
+          actualOutput: "",
+          passed: false,
+          executionTime: 0
+        })
         break
       }
     }
 
-    const status = allPassed ? "accepted" : "wrong_answer"
-
+    // Update submission with results
     await Submission.findByIdAndUpdate(submissionId, {
-      status,
+      status: finalStatus,
       output: lastOutput,
       error: lastError,
+      executionTime: totalExecutionTime,
+      testCaseResults: testCaseResults,
     })
 
-    // Cleanup
-    fs.rmSync(tempDir, { recursive: true })
   } catch (error) {
+    console.error("Execution error:", error)
     await Submission.findByIdAndUpdate(submissionId, {
       status: "runtime_error",
       error: error.message,
