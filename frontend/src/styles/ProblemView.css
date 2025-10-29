@@ -1,0 +1,60 @@
+.problem-view {
+  padding: 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.problem-view h2 {
+  color: #333;
+  font-size: 24px;
+  margin-bottom: 20px;
+  border-bottom: 2px solid #667eea;
+  padding-bottom: 10px;
+}
+
+.problem-section {
+  margin-bottom: 20px;
+}
+
+.problem-section h3 {
+  color: #667eea;
+  font-size: 16px;
+  margin-bottom: 10px;
+}
+
+.problem-section p {
+  color: #555;
+  line-height: 1.6;
+  margin-bottom: 10px;
+}
+
+.example {
+  background-color: #f9f9f9;
+  border-left: 4px solid #667eea;
+  padding: 12px;
+  margin-bottom: 10px;
+  border-radius: 4px;
+}
+
+.example-item {
+  margin-bottom: 10px;
+}
+
+.example-item:last-child {
+  margin-bottom: 0;
+}
+
+.example-item strong {
+  color: #333;
+  display: block;
+  margin-bottom: 5px;
+}
+
+.example-item pre {
+  background-color: #f0f0f0;
+  padding: 8px;
+  border-radius: 4px;
+  overflow-x: auto;
+  font-size: 13px;
+  color: #333;
+}

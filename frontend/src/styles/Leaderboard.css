@@ -1,0 +1,64 @@
+.leaderboard {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.leaderboard h2 {
+  font-size: 16px;
+  color: #333;
+  margin-bottom: 15px;
+}
+
+.leaderboard-table {
+  flex: 1;
+  overflow-y: auto;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+}
+
+.leaderboard-header {
+  display: grid;
+  grid-template-columns: 40px 1fr 60px;
+  gap: 10px;
+  padding: 10px;
+  background-color: #667eea;
+  color: white;
+  font-weight: 600;
+  font-size: 13px;
+  position: sticky;
+  top: 0;
+}
+
+.leaderboard-row {
+  display: grid;
+  grid-template-columns: 40px 1fr 60px;
+  gap: 10px;
+  padding: 10px;
+  border-bottom: 1px solid #e0e0e0;
+  font-size: 13px;
+  align-items: center;
+}
+
+.leaderboard-row:hover {
+  background-color: #f9f9f9;
+}
+
+.rank {
+  text-align: center;
+  font-weight: 600;
+  color: #667eea;
+}
+
+.name {
+  color: #333;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.solved {
+  text-align: center;
+  color: #27ae60;
+  font-weight: 600;
+}
