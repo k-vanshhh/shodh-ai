@@ -14,6 +14,7 @@ function ContestPage({ data, onLeave }) {
   const [leaderboard, setLeaderboard] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false)
 
   const fetchProblems = useCallback(async () => {
     try {
@@ -58,6 +59,24 @@ function ContestPage({ data, onLeave }) {
     }
   }, [data.contestId])
 
+  // Warn on tab close/refresh while in contest
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      e.preventDefault()
+      e.returnValue = ''
+      return ''
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [])
+
+  const requestLeave = () => setShowLeaveConfirm(true)
+  const cancelLeave = () => setShowLeaveConfirm(false)
+  const confirmLeave = () => {
+    setShowLeaveConfirm(false)
+    if (typeof onLeave === 'function') onLeave()
+  }
+
   useEffect(() => {
     fetchProblems()
     fetchLeaderboard() // Fetch immediately on mount
@@ -99,11 +118,11 @@ function ContestPage({ data, onLeave }) {
           </span>
         </div>
         <button 
-          onClick={onLeave} 
+          onClick={requestLeave} 
           className="leave-btn"
           aria-label="Leave contest"
         >
-          Leave Contest
+          Finish Contest
         </button>
       </header>
 
@@ -154,8 +173,27 @@ function ContestPage({ data, onLeave }) {
           <Leaderboard entries={leaderboard} />
         </aside>
       </div>
+      {showLeaveConfirm && (
+        <div className="modal-overlay" role="dialog" aria-modal="true">
+          <div className="modal-dialog">
+            <div className="modal-header">
+              <span className="modal-title">Finish Contest?</span>
+            </div>
+            <div className="modal-body">
+              You have an active contest session. Are you sure you want to end test?. All unsaved progress will be lost.
+            </div>
+            <div className="modal-actions">
+              <button className="btn-ghost" onClick={cancelLeave}>Stay</button>
+              <button className="btn-primary" onClick={confirmLeave}>Leave</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
+
+// Leave confirmation modal (reuses global modal styles)
+// Render inside component return
 
 export default ContestPage
