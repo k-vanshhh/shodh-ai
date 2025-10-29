@@ -1,585 +1,280 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState, useEffect } from "react"
+import "../styles/JoinPage.css"
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'
 
 function JoinPage({ onJoin }) {
-  const [contestId, setContestId] = useState("")
   const [username, setUsername] = useState("")
-  const [error, setError] = useState("")
-  const [loading, setLoading] = useState(false)
+  const [contestCode, setContestCode] = useState("")
   const [contests, setContests] = useState([])
-  const [contestMeta, setContestMeta] = useState({})
+  const [loading, setLoading] = useState(true)
+  const [joining, setJoining] = useState(false)
+  const [error, setError] = useState("")
+  const [selectedContest, setSelectedContest] = useState(null)
 
   useEffect(() => {
-    const loadContests = async () => {
-      try {
-        const res = await fetch(`http://localhost:5000/api/contests`)
-        if (!res.ok) return
-        const data = await res.json()
-        const list = Array.isArray(data) ? data : []
-        setContests(list)
-
-        const counts = await Promise.all(
-          list.map(async (c) => {
-            try {
-              const r = await fetch(`http://localhost:5000/api/contests/${c._id}/problems`)
-              if (!r.ok) return [c._id, 0]
-              const p = await r.json()
-              return [c._id, Array.isArray(p) ? p.length : 0]
-            } catch (_) {
-              return [c._id, 0]
-            }
-          })
-        )
-        const meta = {}
-        counts.forEach(([id, n]) => { meta[id] = { problemCount: n } })
-        setContestMeta(meta)
-      } catch (_) {}
-    }
-    loadContests()
+    fetchContests()
   }, [])
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    setError("")
-    setLoading(true)
-
-    if (!contestId.trim() || !username.trim()) {
-      setError("Please fill in all fields")
-      setLoading(false)
-      return
-    }
-
+  const fetchContests = async () => {
     try {
-      const path = `http://localhost:5000/api/contests/${contestId}`
-      const response = await fetch(path)
-      const maybeJson = await response.clone().json().catch(() => null)
-
+      setLoading(true)
+      setError("")
+      const response = await fetch(`${API_URL}/api/contests`)
+      
       if (!response.ok) {
-        const msg = (maybeJson && (maybeJson.error || maybeJson.message)) || response.statusText || "Contest not found"
-        throw new Error(msg)
+        console.error(`HTTP Error: ${response.status} ${response.statusText}`)
+        throw new Error(`Failed to fetch contests: ${response.status}`)
       }
-
-      const contest = maybeJson || (await response.json())
-      const resolvedContestId = contest?._id || contestId
-      onJoin({ contestId: resolvedContestId, username, contest })
-    } catch (err) {
-      setError(err.message || "Failed to join contest")
+      
+      const contentType = response.headers.get("content-type")
+      if (!contentType || !contentType.includes("application/json")) {
+        console.error("Response is not JSON:", await response.text())
+        throw new Error("Server returned invalid response format")
+      }
+      
+      const data = await response.json()
+      const contestList = Array.isArray(data) ? data : (data.contests || [])
+      setContests(contestList)
+    } catch (error) {
+      console.error("Error fetching contests:", error)
+      setContests([])
     } finally {
       setLoading(false)
     }
   }
 
+  const handleContestSelect = (contest) => {
+    setSelectedContest(contest)
+    setContestCode(contest.code || contest._id || "")
+    setError("")
+  }
+
+  const handleJoinContest = async (e) => {
+    e.preventDefault()
+    
+    if (!username.trim()) {
+      setError("Please enter your username")
+      return
+    }
+
+    if (!selectedContest) {
+      setError("Please select a contest")
+      return
+    }
+
+    setJoining(true)
+    setError("")
+
+    try {
+      const response = await fetch(`${API_URL}/api/contests/${selectedContest._id}`)
+      
+      const contentType = response.headers.get("content-type")
+      if (!contentType || !contentType.includes("application/json")) {
+        console.error("Join response is not JSON")
+        throw new Error("Server returned invalid response format")
+      }
+
+      const contest = await response.json()
+
+      if (!response.ok) {
+        throw new Error(contest.message || "Failed to join contest")
+      }
+
+      if (typeof onJoin === 'function') {
+        onJoin({
+          username: username.trim(),
+          contestId: selectedContest._id,
+          contest: contest,
+        })
+      }
+    } catch (error) {
+      console.error("Join error:", error)
+      setError(error.message || "Failed to join contest. Please try again.")
+    } finally {
+      setJoining(false)
+    }
+  }
+
   return (
-    <div style={styles.container}>
-      <div style={styles.wrapper}>
-        
-        {/* Left Panel - Contest Selection */}
-        <div style={styles.leftPanel}>
-          <div style={styles.panelHeader}>
-            <div style={styles.badge}>
-              <span style={styles.pulseDot}></span>
-              Available Contests
+    <div className="join-page">
+      <div className="join-background">
+        <div className="gradient-orb orb-1"></div>
+        <div className="gradient-orb orb-2"></div>
+        <div className="gradient-orb orb-3"></div>
+      </div>
+
+      <div className="join-container">
+        <div className="join-header">
+          <div className="logo-section">
+            <div className="logo-icon">
+              <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+                <path d="M8 4L4 8l4 4M24 4l4 4-4 4M18 4L14 28" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/>
+              </svg>
             </div>
-            <h2 style={styles.panelTitle}>Choose Your Challenge</h2>
-            <p style={styles.panelSubtitle}>Select a contest to get started</p>
+            <h1>Shodh-a-Code</h1>
           </div>
-
-          <div style={styles.contestList}>
-            {contests.length === 0 ? (
-              <div style={styles.emptyState}>
-                <div style={styles.emptyIcon}>📦</div>
-                <p style={styles.emptyText}>Loading contests...</p>
-              </div>
-            ) : (
-              contests.map((c) => {
-                const now = Date.now()
-                const start = c.startTime ? new Date(c.startTime).getTime() : 0
-                const end = c.endTime ? new Date(c.endTime).getTime() : 0
-                const status = start && end
-                  ? (now < start ? 'upcoming' : now > end ? 'ended' : 'live')
-                  : 'live'
-                const problems = contestMeta[c._id]?.problemCount ?? 0
-                const active = contestId === c._id
-
-                return (
-                  <button
-                    key={c._id}
-                    type="button"
-                    onClick={() => setContestId(c._id)}
-                    style={{
-                      ...styles.contestCard,
-                      ...(active ? styles.contestCardActive : {})
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!active) {
-                        e.currentTarget.style.transform = 'translateY(-4px)'
-                        e.currentTarget.style.boxShadow = '0 12px 24px rgba(139, 92, 246, 0.2)'
-                        e.currentTarget.style.borderColor = '#7c3aed'
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (!active) {
-                        e.currentTarget.style.transform = 'translateY(0)'
-                        e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.3)'
-                        e.currentTarget.style.borderColor = '#374151'
-                      }
-                    }}
-                  >
-                    <div style={styles.cardTop}>
-                      <h3 style={styles.cardTitle}>{c.title}</h3>
-                      <span style={{
-                        ...styles.statusBadge,
-                        ...(status === 'live' ? styles.statusLive : 
-                            status === 'upcoming' ? styles.statusUpcoming : 
-                            styles.statusEnded)
-                      }}>
-                        {status === 'live' ? '● Live' : status === 'upcoming' ? '◷ Soon' : '✓ Ended'}
-                      </span>
-                    </div>
-                    
-                    <div style={styles.cardMeta}>
-                      {/* <span>📋 {problems} problem{problems !== 1 ? 's' : ''}</span> */}
-                      <span>📅 {c.startTime ? new Date(c.startTime).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'TBD'}</span>
-                    </div>
-
-                    <div style={styles.cardFooter}>
-                      <code style={styles.cardCode}>#{c.shortId ?? c._id.slice(0, 8)}</code>
-                      <span style={{
-                        ...styles.cardAction,
-                        color: active ? '#a78bfa' : '#6b7280'
-                      }}>
-                        {active ? '✓ Selected' : 'Select →'}
-                      </span>
-                    </div>
-                  </button>
-                )
-              })
-            )}
-          </div>
+          <p className="tagline">Join a coding competition and test your skills</p>
         </div>
 
-        {/* Right Panel - Join Form */}
-        <div style={styles.rightPanel}>
-          <div style={styles.header}>
-            <h1 style={styles.title}>Shodh-a-Code</h1>
-            <p style={styles.subtitle}>Programming Contest Platform</p>
-          </div>
+        <div className="join-content">
+          <div className="contests-section">
+            <div className="contests-card">
+              <div className="contests-header">
+                <div className="header-with-badge">
+                  <span className="live-badge">
+                    <span className="pulse-dot"></span>
+                    Available Contests
+                  </span>
+                  <h3>Choose Your Challenge</h3>
+                  <p className="contests-subtitle">Select a contest to get started</p>
+                </div>
+                <button onClick={fetchContests} className="refresh-btn" disabled={loading}>
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className={loading ? 'spinning' : ''}>
+                    <path d="M14 8A6 6 0 1 1 8 2M8 2V5M8 2L5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                  </svg>
+                </button>
+              </div>
 
-          <div style={styles.formWrapper}>
-            <div style={styles.formGroup}>
-              <label htmlFor="contestId" style={styles.label}>
-                Contest ID
-              </label>
-              <div style={styles.inputWrapper}>
-                <input
-                  id="contestId"
-                  type="text"
-                  value={contestId}
-                  readOnly
-                  placeholder="Select a contest from the left"
-                  style={styles.inputDisabled}
-                />
-                {contestId && (
-                  <span style={styles.checkmark}>✓</span>
+              <div className="contests-list">
+                {loading ? (
+                  <div className="contests-loading">
+                    <div className="loading-spinner"></div>
+                    <span>Loading contests...</span>
+                  </div>
+                ) : contests.length > 0 ? (
+                  contests.map((contest) => (
+                    <button
+                      key={contest._id}
+                      className={`contest-item ${selectedContest?._id === contest._id ? 'selected' : ''}`}
+                      onClick={() => handleContestSelect(contest)}
+                      disabled={joining}
+                    >
+                      <div className="contest-info">
+                        <div className="contest-title">{contest.title}</div>
+                        <div className="contest-meta">
+                          <span className="contest-code-badge">
+                            Code: {contest.code || contest._id?.slice(0, 8)}
+                          </span>
+                          {contest.startTime && (
+                            <>
+                              <span className="dot">•</span>
+                              <span className="contest-date">
+                                {new Date(contest.startTime).toLocaleDateString('en-US', { 
+                                  month: 'short', 
+                                  day: 'numeric' 
+                                })}
+                              </span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                      {selectedContest?._id === contest._id ? (
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" className="check-icon">
+                          <circle cx="10" cy="10" r="9" stroke="currentColor" strokeWidth="2"/>
+                          <path d="M6 10l2.5 2.5L14 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                        </svg>
+                      ) : (
+                        <span className="select-arrow">→</span>
+                      )}
+                    </button>
+                  ))
+                ) : (
+                  <div className="no-contests">
+                    <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+                      <circle cx="24" cy="24" r="20" stroke="currentColor" strokeWidth="2"/>
+                      <path d="M18 22h12M18 26h8" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                    </svg>
+                    <p>No contests available</p>
+                    <span>Check back later for new contests</span>
+                  </div>
                 )}
               </div>
             </div>
-
-            <div style={styles.formGroup}>
-              <label htmlFor="username" style={styles.label}>
-                Username
-              </label>
-              <input
-                id="username"
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="Enter your username"
-                disabled={loading}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !loading && contestId && username) {
-                    handleSubmit(e)
-                  }
-                }}
-                style={{
-                  ...styles.input,
-                  ...(loading ? styles.inputDisabledOpacity : {})
-                }}
-                onFocus={(e) => {
-                  e.currentTarget.style.borderColor = '#8b5cf6'
-                  e.currentTarget.style.boxShadow = '0 0 0 3px rgba(139, 92, 246, 0.2)'
-                }}
-                onBlur={(e) => {
-                  e.currentTarget.style.borderColor = '#374151'
-                  e.currentTarget.style.boxShadow = 'none'
-                }}
-              />
-            </div>
-
-            {error && (
-              <div style={styles.errorMessage}>
-                <span style={styles.errorIcon}>⚠️</span>
-                <p style={styles.errorText}>{error}</p>
-              </div>
-            )}
-
-            <button
-              type="button"
-              onClick={handleSubmit}
-              disabled={loading || !contestId || !username}
-              style={{
-                ...styles.submitBtn,
-                ...(loading || !contestId || !username ? styles.submitBtnDisabled : {})
-              }}
-              onMouseEnter={(e) => {
-                if (!loading && contestId && username) {
-                  e.currentTarget.style.transform = 'translateY(-2px)'
-                  e.currentTarget.style.boxShadow = '0 12px 32px rgba(139, 92, 246, 0.4)'
-                }
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)'
-                e.currentTarget.style.boxShadow = '0 8px 20px rgba(139, 92, 246, 0.3)'
-              }}
-            >
-              {loading ? (
-                <>
-                  <span style={styles.spinner}></span>
-                  <span>Joining Contest...</span>
-                </>
-              ) : (
-                <>
-                  <span>Join Contest</span>
-                  <span style={styles.arrow}>→</span>
-                </>
-              )}
-            </button>
           </div>
 
-          <div style={styles.footer}>
-            <p style={styles.footerText}>Secure • Real-time • Collaborative</p>
+          <div className="join-form-section">
+            <div className="form-card">
+              <h2>Join Contest</h2>
+              <form onSubmit={handleJoinContest}>
+                <div className="form-group">
+                  <label htmlFor="contestCode">Contest Code</label>
+                  <div className="input-wrapper">
+                    <input
+                      type="text"
+                      id="contestCode"
+                      value={contestCode}
+                      readOnly
+                      placeholder="Select a contest from the left"
+                      className="input-readonly"
+                    />
+                    {contestCode && (
+                      <span className="input-checkmark">✓</span>
+                    )}
+                  </div>
+                  
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="username">Username</label>
+                  <input
+                    type="text"
+                    id="username"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    placeholder="Enter your username"
+                    disabled={joining}
+                    autoComplete="off"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !joining && selectedContest && username) {
+                        handleJoinContest(e)
+                      }
+                    }}
+                  />
+                </div>
+
+                {error && (
+                  <div className="error-message">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                      <circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.5"/>
+                      <path d="M8 4v5M8 11v1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                    </svg>
+                    {error}
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  className="join-btn"
+                  disabled={joining || !selectedContest || !username}
+                >
+                  {joining ? (
+                    <>
+                      <span className="spinner"></span>
+                      Joining Contest...
+                    </>
+                  ) : (
+                    <>
+                      Join Contest
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        <path d="M2 8h12M10 4l4 4-4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                      </svg>
+                    </>
+                  )}
+                </button>
+              </form>
+            </div>
           </div>
         </div>
-      </div>
 
-      <style>{`
-        @keyframes spin {
-          to { transform: rotate(360deg); }
-        }
-        @keyframes pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.5; }
-        }
-      `}</style>
+        <div className="join-footer">
+          <p>Secure • Real-time • Collaborative</p>
+        </div>
+      </div>
     </div>
   )
-}
-
-const styles = {
-  container: {
-    minHeight: '100vh',
-    background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4c1d95 100%)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: '24px',
-    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-  },
-  wrapper: {
-    width: '100%',
-    maxWidth: '1200px',
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-    gap: '32px'
-  },
-  leftPanel: {
-    background: 'rgba(30, 41, 59, 0.8)',
-    backdropFilter: 'blur(20px)',
-    borderRadius: '24px',
-    padding: '32px',
-    boxShadow: '0 20px 40px rgba(0,0,0,0.4)',
-    border: '1px solid rgba(255,255,255,0.1)'
-  },
-  panelHeader: {
-    marginBottom: '24px'
-  },
-  badge: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: '8px',
-    padding: '6px 12px',
-    background: 'rgba(139, 92, 246, 0.2)',
-    color: '#c4b5fd',
-    borderRadius: '999px',
-    fontSize: '12px',
-    fontWeight: '600',
-    marginBottom: '12px',
-    border: '1px solid rgba(139, 92, 246, 0.3)'
-  },
-  pulseDot: {
-    width: '6px',
-    height: '6px',
-    background: '#a78bfa',
-    borderRadius: '50%',
-    display: 'inline-block',
-    animation: 'pulse 2s ease-in-out infinite'
-  },
-  panelTitle: {
-    fontSize: '24px',
-    fontWeight: '700',
-    color: '#f1f5f9',
-    margin: '0 0 4px 0'
-  },
-  panelSubtitle: {
-    fontSize: '14px',
-    color: '#94a3b8',
-    margin: 0
-  },
-  contestList: {
-    maxHeight: '500px',
-    overflowY: 'auto',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '12px',
-    paddingRight: '8px'
-  },
-  emptyState: {
-    textAlign: 'center',
-    padding: '48px 24px'
-  },
-  emptyIcon: {
-    fontSize: '48px',
-    marginBottom: '12px',
-    opacity: 0.5
-  },
-  emptyText: {
-    color: '#64748b',
-    fontSize: '14px',
-    margin: 0
-  },
-  contestCard: {
-    width: '100%',
-    textAlign: 'left',
-    padding: '16px',
-    borderRadius: '16px',
-    border: '2px solid #374151',
-    background: 'rgba(31, 41, 55, 0.6)',
-    cursor: 'pointer',
-    transition: 'all 0.3s ease',
-    boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '10px'
-  },
-  contestCardActive: {
-    background: 'rgba(109, 40, 217, 0.2)',
-    borderColor: '#8b5cf6',
-    boxShadow: '0 0 0 3px rgba(139, 92, 246, 0.2), 0 12px 24px rgba(139, 92, 246, 0.3)'
-  },
-  cardTop: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    gap: '8px'
-  },
-  cardTitle: {
-    fontSize: '16px',
-    fontWeight: '700',
-    color: '#f1f5f9',
-    margin: 0,
-    flex: 1
-  },
-  statusBadge: {
-    padding: '4px 8px',
-    borderRadius: '999px',
-    fontSize: '11px',
-    fontWeight: '700',
-    whiteSpace: 'nowrap'
-  },
-  statusLive: {
-    background: 'rgba(16, 185, 129, 0.2)',
-    color: '#6ee7b7',
-    border: '1px solid rgba(16, 185, 129, 0.3)'
-  },
-  statusUpcoming: {
-    background: 'rgba(59, 130, 246, 0.2)',
-    color: '#93c5fd',
-    border: '1px solid rgba(59, 130, 246, 0.3)'
-  },
-  statusEnded: {
-    background: 'rgba(100, 116, 139, 0.2)',
-    color: '#cbd5e1',
-    border: '1px solid rgba(100, 116, 139, 0.3)'
-  },
-  cardMeta: {
-    display: 'flex',
-    gap: '16px',
-    fontSize: '12px',
-    color: '#94a3b8'
-  },
-  cardFooter: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: '8px',
-    borderTop: '1px dashed #374151'
-  },
-  cardCode: {
-    fontSize: '11px',
-    color: '#64748b',
-    fontFamily: 'Courier New, monospace'
-  },
-  cardAction: {
-    fontSize: '12px',
-    fontWeight: '700',
-    transition: 'color 0.2s'
-  },
-  rightPanel: {
-    background: 'rgba(30, 41, 59, 0.8)',
-    backdropFilter: 'blur(20px)',
-    borderRadius: '24px',
-    padding: '32px',
-    boxShadow: '0 20px 40px rgba(0,0,0,0.4)',
-    border: '1px solid rgba(255,255,255,0.1)',
-    display: 'flex',
-    flexDirection: 'column'
-  },
-  header: {
-    marginBottom: '32px'
-  },
-  title: {
-    fontSize: '48px',
-    fontWeight: '900',
-    color: '#f1f5f9',
-    margin: '0 0 8px 0',
-    letterSpacing: '-0.02em'
-  },
-  subtitle: {
-    fontSize: '16px',
-    color: '#94a3b8',
-    margin: 0
-  },
-  formWrapper: {
-    flex: 1,
-    display: 'flex',
-    flexDirection: 'column',
-    justifyContent: 'center',
-    gap: '24px'
-  },
-  formGroup: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '8px'
-  },
-  label: {
-    fontSize: '14px',
-    fontWeight: '600',
-    color: '#cbd5e1'
-  },
-  inputWrapper: {
-    position: 'relative'
-  },
-  input: {
-    width: '100%',
-    padding: '14px 16px',
-    background: 'rgba(15, 23, 42, 0.8)',
-    border: '2px solid #374151',
-    borderRadius: '12px',
-    fontSize: '15px',
-    color: '#f1f5f9',
-    transition: 'all 0.2s',
-    boxSizing: 'border-box',
-    outline: 'none'
-  },
-  inputDisabled: {
-    width: '100%',
-    padding: '14px 16px',
-    background: 'rgba(15, 23, 42, 0.5)',
-    border: '2px solid #374151',
-    borderRadius: '12px',
-    fontSize: '14px',
-    color: '#64748b',
-    fontFamily: 'Courier New, monospace',
-    cursor: 'not-allowed',
-    boxSizing: 'border-box',
-    outline: 'none'
-  },
-  inputDisabledOpacity: {
-    opacity: 0.5,
-    cursor: 'not-allowed'
-  },
-  checkmark: {
-    position: 'absolute',
-    right: '12px',
-    top: '50%',
-    transform: 'translateY(-50%)',
-    color: '#34d399',
-    fontSize: '20px'
-  },
-  errorMessage: {
-    display: 'flex',
-    alignItems: 'flex-start',
-    gap: '12px',
-    padding: '16px',
-    background: 'rgba(239, 68, 68, 0.15)',
-    border: '2px solid rgba(239, 68, 68, 0.3)',
-    borderRadius: '12px'
-  },
-  errorIcon: {
-    fontSize: '20px',
-    flexShrink: 0
-  },
-  errorText: {
-    fontSize: '14px',
-    color: '#fca5a5',
-    fontWeight: '500',
-    margin: 0
-  },
-  submitBtn: {
-    width: '100%',
-    padding: '16px 24px',
-    background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
-    color: 'white',
-    border: 'none',
-    borderRadius: '12px',
-    fontSize: '16px',
-    fontWeight: '700',
-    cursor: 'pointer',
-    transition: 'all 0.3s ease',
-    boxShadow: '0 8px 20px rgba(139, 92, 246, 0.3)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: '8px'
-  },
-  submitBtnDisabled: {
-    opacity: 0.5,
-    cursor: 'not-allowed'
-  },
-  spinner: {
-    width: '18px',
-    height: '18px',
-    border: '2px solid rgba(255,255,255,0.3)',
-    borderTopColor: 'white',
-    borderRadius: '50%',
-    animation: 'spin 0.8s linear infinite',
-    display: 'inline-block'
-  },
-  arrow: {
-    transition: 'transform 0.2s'
-  },
-  footer: {
-    marginTop: '32px',
-    paddingTop: '24px',
-    borderTop: '1px solid #374151'
-  },
-  footerText: {
-    fontSize: '12px',
-    color: '#64748b',
-    textAlign: 'center',
-    margin: 0
-  }
 }
 
 export default JoinPage

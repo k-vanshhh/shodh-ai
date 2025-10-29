@@ -21,7 +21,6 @@ int main() {
   const [submissionDetails, setSubmissionDetails] = useState(null)
   const [pollCount, setPollCount] = useState(0)
 
-  // Language templates
   const languageTemplates = {
     python: `# Write your code here
 def main():
@@ -45,12 +44,9 @@ int main() {
     }
   }, [submissionId, pollCount])
 
-  // Reset editor when problem changes
   useEffect(() => {
     if (!problem) return
-    // reset code to the current language template
     setCode(languageTemplates[language] || "")
-    // clear any in-flight or previous submission state
     setSubmissionId(null)
     setSubmissionStatus(null)
     setStatusMessage("")
@@ -58,10 +54,8 @@ int main() {
     setPollCount(0)
   }, [problem?._id, language])
 
-  // Update code when language changes
   useEffect(() => {
     setCode(languageTemplates[language] || languageTemplates.cpp)
-    // reset status when switching languages
     setSubmissionStatus(null)
     setStatusMessage("")
     setSubmissionDetails(null)
@@ -107,9 +101,8 @@ int main() {
 
       if (submission.status !== "pending") {
         setSubmissionStatus(submission.status)
-        setStatusMessage(submission.status === "accepted" ? "✓ Accepted!" : `✗ ${submission.status.replace(/_/g, " ")}`)
+        setStatusMessage(submission.status === "accepted" ? "Accepted" : submission.status.replace(/_/g, " "))
         setSubmissionId(null)
-        // Inform parent so leaderboard can refresh immediately
         if (typeof onSubmissionComplete === 'function') {
           try { onSubmissionComplete() } catch (_) {}
         }
@@ -157,7 +150,14 @@ int main() {
   return (
     <div className="code-editor">
       <div className="editor-header">
-        <h3>Code Editor</h3>
+        <div className="editor-tabs">
+          <button className="editor-tab active">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <path d="M4 1L1 4l3 3M10 1l3 3-3 3M8 1L6 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+            </svg>
+            Code
+          </button>
+        </div>
         <div className="editor-controls">
           <select 
             value={language} 
@@ -171,66 +171,109 @@ int main() {
           <button
             onClick={handleSubmit}
             disabled={submitting || !!submissionId}
-            className={`submit-btn ${submissionStatus}`}
+            className={`submit-btn ${submissionStatus || ''}`}
           >
             {submitting ? "Submitting..." : submissionId ? "Running..." : "Submit"}
           </button>
         </div>
       </div>
 
-      <textarea
-        value={code}
-        onChange={(e) => setCode(e.target.value)}
-        className="editor-textarea"
-        placeholder={`Write your ${language} code here...`}
-        disabled={submitting || !!submissionId}
-      />
+      <div className="editor-body">
+        <textarea
+          value={code}
+          onChange={(e) => setCode(e.target.value)}
+          className="editor-textarea"
+          placeholder={`Write your ${language} code here...`}
+          disabled={submitting || !!submissionId}
+          spellCheck="false"
+        />
+      </div>
 
-      {statusMessage && (
-        <div className={`status-message ${submissionStatus}`}>
-          <div>{statusMessage}</div>
-          <div>
-            {!!submissionStatus && (
-              <button onClick={dismissStatus} className="retry-btn" aria-label="Dismiss status">Close</button>
+      {submissionStatus && (
+        <div className={`result-panel ${submissionStatus}`}>
+          <div className="result-header">
+            <div className="result-status">
+              {submissionStatus === "accepted" && (
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                  <circle cx="10" cy="10" r="9" stroke="currentColor" strokeWidth="2"/>
+                  <path d="M6 10l2.5 2.5L14 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                </svg>
+              )}
+              {submissionStatus !== "accepted" && (
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                  <circle cx="10" cy="10" r="9" stroke="currentColor" strokeWidth="2"/>
+                  <path d="M7 7l6 6M13 7l-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                </svg>
+              )}
+              <span className="status-text">{statusMessage}</span>
+            </div>
+            <button onClick={dismissStatus} className="dismiss-btn">×</button>
+          </div>
+
+          <div className="result-body">
+            {submissionDetails?.error && (
+              <div className="result-detail error">
+                <span className="detail-label">Error:</span>
+                <pre className="detail-value">{submissionDetails.error}</pre>
+              </div>
+            )}
+            
+            {submissionDetails?.executionTime && (
+              <div className="result-detail">
+                <span className="detail-label">Runtime:</span>
+                <span className="detail-value">{submissionDetails.executionTime}ms</span>
+              </div>
+            )}
+
+            {submissionDetails?.testCaseResults && submissionDetails.testCaseResults.length > 0 && (
+              <div className="test-cases">
+                <div className="test-cases-header">Test Cases</div>
+                {submissionDetails.testCaseResults.map((result, idx) => (
+                  <div key={idx} className={`test-case ${result.passed ? 'passed' : 'failed'}`}>
+                    <div className="test-case-header">
+                      {result.passed ? (
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                          <path d="M4 8l2 2 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                        </svg>
+                      ) : (
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                          <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                        </svg>
+                      )}
+                      <span>Test Case {idx + 1}</span>
+                    </div>
+                    {!result.passed && (
+                      <div className="test-case-details">
+                        <div className="test-detail">
+                          <span className="test-label">Expected:</span>
+                          <code className="test-value">{result.expectedOutput}</code>
+                        </div>
+                        <div className="test-detail">
+                          <span className="test-label">Got:</span>
+                          <code className="test-value">{result.actualOutput}</code>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
             )}
           </div>
-          {submissionDetails?.error && <div className="detail-text">Error: {submissionDetails.error}</div>}
-          {submissionDetails?.output && submissionStatus === "wrong_answer" && (
-            <div className="detail-text">Output: {submissionDetails.output}</div>
-          )}
-          {submissionDetails?.executionTime && (
-            <div className="detail-text">Execution Time: {submissionDetails.executionTime}ms</div>
-          )}
-          {submissionDetails?.testCaseResults && submissionDetails.testCaseResults.length > 0 && (
-            <div className="test-case-results">
-              <h4>Test Case Results:</h4>
-              {submissionDetails.testCaseResults.map((result, idx) => (
-                <div key={idx} className={`test-case ${result.passed ? 'passed' : 'failed'}`}>
-                  <div>Test Case {idx + 1}: {result.passed ? '✓ Passed' : '✗ Failed'}</div>
-                  {!result.passed && (
-                    <div className="test-case-details">
-                      <div>Expected: {result.expectedOutput}</div>
-                      <div>Got: {result.actualOutput}</div>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
         </div>
       )}
 
       {showLangConfirm && (
-        <div className="modal-overlay" role="dialog" aria-modal="true">
+        <div className="modal-overlay">
           <div className="modal-dialog">
             <div className="modal-header">
-              <span className="modal-title">Switch Language?</span>
+              <h3>Switch Language?</h3>
+              <button onClick={cancelLanguageSwitch} className="modal-close">×</button>
             </div>
             <div className="modal-body">
-              Switching language will reset the editor and clear your current code.
+              <p>Switching language will reset the editor and clear your current code.</p>
             </div>
             <div className="modal-actions">
-              <button className="btn-ghost" onClick={cancelLanguageSwitch}>Cancel</button>
+              <button className="btn-secondary" onClick={cancelLanguageSwitch}>Cancel</button>
               <button className="btn-primary" onClick={confirmLanguageSwitch}>Continue</button>
             </div>
           </div>

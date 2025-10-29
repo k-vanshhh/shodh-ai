@@ -15,6 +15,7 @@ function ContestPage({ data, onLeave }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false)
+  const [showLeaderboard, setShowLeaderboard] = useState(false)
 
   const fetchProblems = useCallback(async () => {
     try {
@@ -55,11 +56,9 @@ function ContestPage({ data, onLeave }) {
       setLeaderboard(list)
     } catch (error) {
       console.error("Error fetching leaderboard:", error)
-      // Don't show error for leaderboard as it's less critical
     }
   }, [data.contestId])
 
-  // Warn on tab close/refresh while in contest
   useEffect(() => {
     const handleBeforeUnload = (e) => {
       e.preventDefault()
@@ -79,7 +78,7 @@ function ContestPage({ data, onLeave }) {
 
   useEffect(() => {
     fetchProblems()
-    fetchLeaderboard() // Fetch immediately on mount
+    fetchLeaderboard()
     
     const leaderboardInterval = setInterval(fetchLeaderboard, 20000)
     return () => clearInterval(leaderboardInterval)
@@ -92,7 +91,8 @@ function ContestPage({ data, onLeave }) {
   if (loading) {
     return (
       <div className="loading" role="status" aria-live="polite">
-        Loading contest...
+        <div className="loading-spinner"></div>
+        <span>Loading contest...</span>
       </div>
     )
   }
@@ -111,35 +111,45 @@ function ContestPage({ data, onLeave }) {
   return (
     <div className="contest-container">
       <header className="contest-header">
-        <div className="header-content">
-          <h1>{data.contest?.title || 'Contest'}</h1>
-          <span className="username" aria-label="Current user">
-            User: {data.username}
-          </span>
+        <div className="header-left">
+          <div className="logo">Contest</div>
+          <div className="divider"></div>
+          <h1>{data.contest?.title || 'Coding Challenge'}</h1>
         </div>
-        <button 
-          onClick={requestLeave} 
-          className="leave-btn"
-          aria-label="Leave contest"
-        >
-          Finish
-        </button>
+        <div className="header-right">
+          <button 
+            onClick={() => setShowLeaderboard(!showLeaderboard)} 
+            className="leaderboard-toggle"
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M2 14h3V8H2v6zm5-14h3v14H7V0zm5 7h3v7h-3V7z" fill="currentColor"/>
+            </svg>
+            Leaderboard
+          </button>
+          <span className="username">{data.username}</span>
+          <button onClick={requestLeave} className="leave-btn">
+            Finish Contest
+          </button>
+        </div>
       </header>
 
       <div className="contest-layout">
-        <aside className="problems-sidebar" aria-label="Problems list">
-          <h2>Problems</h2>
-          <div className="problems-list" role="navigation">
+        <aside className={`problems-sidebar ${showLeaderboard ? 'collapsed' : ''}`}>
+          <div className="problems-header">
+            <h2>Problems</h2>
+            <span className="problem-count">{problems.length}</span>
+          </div>
+          <div className="problems-list">
             {problems.length > 0 ? (
-              problems.map((problem) => (
+              problems.map((problem, idx) => (
                 <button
                   key={problem._id}
                   className={`problem-item ${selectedProblem?._id === problem._id ? "active" : ""}`}
                   onClick={() => handleProblemSelect(problem)}
-                  aria-current={selectedProblem?._id === problem._id ? "page" : undefined}
-                  aria-label={`Problem: ${problem.title}`}
                 >
-                  {problem.title}
+                  <span className="problem-number">{idx + 1}</span>
+                  <span className="problem-title">{problem.title}</span>
+                  <span className="problem-difficulty">Easy</span>
                 </button>
               ))
             ) : (
@@ -148,43 +158,46 @@ function ContestPage({ data, onLeave }) {
           </div>
         </aside>
 
-        <main className="contest-main" role="main">
-          <div className="editor-section">
-            {selectedProblem ? (
-              <>
-                <ProblemView problem={selectedProblem} />
-                <CodeEditor 
-                  problem={selectedProblem} 
-                  contestId={data.contestId} 
-                  username={data.username}
-                  apiUrl={API_URL}
-                  onSubmissionComplete={fetchLeaderboard}
-                />
-              </>
-            ) : (
-              <div className="no-selection">
-                Select a problem to get started
-              </div>
-            )}
-          </div>
+        <main className="contest-main">
+          {selectedProblem ? (
+            <>
+              <ProblemView problem={selectedProblem} />
+              <CodeEditor 
+                problem={selectedProblem} 
+                contestId={data.contestId} 
+                username={data.username}
+                apiUrl={API_URL}
+                onSubmissionComplete={fetchLeaderboard}
+              />
+            </>
+          ) : (
+            <div className="no-selection">
+              <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
+                <path d="M32 8v48M8 32h48" stroke="currentColor" strokeWidth="4" strokeLinecap="round"/>
+              </svg>
+              <p>Select a problem to begin</p>
+            </div>
+          )}
         </main>
 
-        <aside className="leaderboard-sidebar" aria-label="Contest leaderboard">
-          <Leaderboard entries={leaderboard} />
+        <aside className={`leaderboard-sidebar ${showLeaderboard ? 'visible' : ''}`}>
+          <Leaderboard entries={leaderboard} onClose={() => setShowLeaderboard(false)} />
         </aside>
       </div>
+
       {showLeaveConfirm && (
-        <div className="modal-overlay" role="dialog" aria-modal="true">
+        <div className="modal-overlay">
           <div className="modal-dialog">
             <div className="modal-header">
-              <span className="modal-title">Finish?</span>
+              <h3>Leave Contest?</h3>
+              <button onClick={cancelLeave} className="modal-close">×</button>
             </div>
             <div className="modal-body">
-              You have an active contest session. Are you sure you want to end test?. All unsaved progress will be lost.
+              <p>Are you sure you want to leave? Your progress will be saved but you won't be able to submit more solutions.</p>
             </div>
             <div className="modal-actions">
-              <button className="btn-ghost" onClick={cancelLeave}>Stay</button>
-              <button className="btn-primary" onClick={confirmLeave}>Leave</button>
+              <button className="btn-secondary" onClick={cancelLeave}>Cancel</button>
+              <button className="btn-primary" onClick={confirmLeave}>Leave Contest</button>
             </div>
           </div>
         </div>
@@ -192,8 +205,5 @@ function ContestPage({ data, onLeave }) {
     </div>
   )
 }
-
-// Leave confirmation modal (reuses global modal styles)
-// Render inside component return
 
 export default ContestPage

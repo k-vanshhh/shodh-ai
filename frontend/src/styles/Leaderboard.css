@@ -1,237 +1,232 @@
-/* Leaderboard.css - Elite Modern Design */
+/* Modern Leaderboard Styling */
 
 .leaderboard {
   display: flex;
   flex-direction: column;
   height: 100%;
+  background: #282828;
 }
 
-.leaderboard h2 {
-  font-size: 13px;
-  margin-bottom: 18px;
-  color: rgba(255, 255, 255, 0.6);
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 1.5px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+.leaderboard-header {
+  padding: 20px 20px 16px;
+  border-bottom: 1px solid #3a3a3a;
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: space-between;
+  flex-shrink: 0;
 }
 
-.leaderboard h2::before {
-  content: '🏆';
-  font-size: 18px;
-  filter: drop-shadow(0 0 8px rgba(251, 191, 36, 0.5));
+.leaderboard-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
-.leaderboard-table {
+.leaderboard-title svg {
+  color: #ffa116;
+}
+
+.leaderboard-title h2 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #e8e8e8;
+  margin: 0;
+}
+
+.close-btn {
+  width: 32px;
+  height: 32px;
+  background: transparent;
+  border: none;
+  color: #b3b3b3;
+  font-size: 24px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.close-btn:hover {
+  background: #3a3a3a;
+  color: #e8e8e8;
+}
+
+.leaderboard-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+}
+
+.leaderboard-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.leaderboard-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.leaderboard-content::-webkit-scrollbar-thumb {
+  background: #3a3a3a;
+  border-radius: 3px;
+}
+
+.leaderboard-list {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
-/* Modern Header */
-.leaderboard-header {
-  display: grid;
-  grid-template-columns: 45px 1fr 65px;
-  gap: 10px;
-  padding: 10px 14px;
-  background: linear-gradient(135deg, rgba(102, 126, 234, 0.2) 0%, rgba(118, 75, 162, 0.2) 100%);
-  color: rgba(255, 255, 255, 0.9);
-  border-radius: 8px;
-  font-weight: 700;
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  border: 1px solid rgba(102, 126, 234, 0.3);
-  backdrop-filter: blur(10px);
-}
-
-.leaderboard-header .rank,
-.leaderboard-header .name,
-.leaderboard-header .solved {
+.leaderboard-row {
   display: flex;
   align-items: center;
-}
-
-/* Premium Rows */
-.leaderboard-row {
-  display: grid;
-  grid-template-columns: 45px 1fr 65px;
-  gap: 10px;
-  padding: 12px 14px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  gap: 12px;
+  padding: 12px;
+  background: #2a2a2a;
+  border: 1px solid #3a3a3a;
   border-radius: 8px;
-  font-size: 13px;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  align-items: center;
-  backdrop-filter: blur(5px);
+  transition: all 0.2s;
 }
 
 .leaderboard-row:hover {
-  background: rgba(102, 126, 234, 0.1);
-  border-color: rgba(102, 126, 234, 0.4);
-  transform: translateX(4px);
-  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.2);
+  background: #323232;
+  border-color: #4a4a4a;
 }
 
-/* Elite Rank Styling */
-.leaderboard-row .rank {
-  font-weight: 700;
-  color: rgba(255, 255, 255, 0.7);
+.leaderboard-row.top-three {
+  background: linear-gradient(135deg, rgba(255, 161, 22, 0.1) 0%, rgba(255, 161, 22, 0.05) 100%);
+  border-color: rgba(255, 161, 22, 0.3);
+}
+
+.rank-column {
+  width: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 50%;
-  font-size: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  flex-shrink: 0;
 }
 
-/* Championship Medals */
-.leaderboard-row:nth-child(2) .rank {
-  background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
-  color: #1a1a1a;
-  box-shadow: 0 0 20px rgba(255, 215, 0, 0.6), inset 0 2px 4px rgba(255, 255, 255, 0.3);
-  font-size: 13px;
-  font-weight: 800;
-  border: 2px solid rgba(255, 215, 0, 0.5);
+.medal {
+  font-size: 24px;
+  line-height: 1;
 }
 
-.leaderboard-row:nth-child(2) {
-  background: linear-gradient(135deg, rgba(255, 215, 0, 0.1) 0%, rgba(255, 237, 78, 0.05) 100%);
-  border-color: rgba(255, 215, 0, 0.3);
+.rank-number {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #3a3a3a;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #b3b3b3;
 }
 
-.leaderboard-row:nth-child(3) .rank {
-  background: linear-gradient(135deg, #c0c0c0 0%, #e8e8e8 100%);
-  color: #1a1a1a;
-  box-shadow: 0 0 16px rgba(192, 192, 192, 0.5), inset 0 2px 4px rgba(255, 255, 255, 0.3);
-  font-weight: 800;
-  border: 2px solid rgba(192, 192, 192, 0.5);
+.name-column {
+  flex: 1;
+  min-width: 0;
 }
 
-.leaderboard-row:nth-child(3) {
-  background: linear-gradient(135deg, rgba(192, 192, 192, 0.1) 0%, rgba(232, 232, 232, 0.05) 100%);
-  border-color: rgba(192, 192, 192, 0.3);
-}
-
-.leaderboard-row:nth-child(4) .rank {
-  background: linear-gradient(135deg, #cd7f32 0%, #e39d5f 100%);
-  color: white;
-  box-shadow: 0 0 16px rgba(205, 127, 50, 0.5), inset 0 2px 4px rgba(255, 255, 255, 0.2);
-  font-weight: 800;
-  border: 2px solid rgba(205, 127, 50, 0.5);
-}
-
-.leaderboard-row:nth-child(4) {
-  background: linear-gradient(135deg, rgba(205, 127, 50, 0.1) 0%, rgba(227, 157, 95, 0.05) 100%);
-  border-color: rgba(205, 127, 50, 0.3);
-}
-
-/* Name Column */
-.leaderboard-row .name {
+.username {
+  font-size: 14px;
   font-weight: 500;
-  color: rgba(255, 255, 255, 0.8);
+  color: #e8e8e8;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  display: block;
 }
 
-.leaderboard-row:hover .name {
-  color: #ffffff;
+.score-column {
+  flex-shrink: 0;
 }
 
-/* Score Badge */
-.leaderboard-row .solved {
-  font-weight: 700;
-  color: #10b981;
+.score-badge {
+  min-width: 32px;
+  height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(5, 150, 105, 0.2) 100%);
-  padding: 5px 10px;
-  border-radius: 12px;
-  font-size: 12px;
-  border: 1px solid rgba(16, 185, 129, 0.3);
-  backdrop-filter: blur(5px);
+  padding: 0 10px;
+  background: #00b8a3;
+  color: white;
+  font-size: 13px;
+  font-weight: 700;
+  border-radius: 6px;
 }
 
-.leaderboard-row:nth-child(2) .solved,
-.leaderboard-row:nth-child(3) .solved,
-.leaderboard-row:nth-child(4) .solved {
-  box-shadow: 0 0 10px rgba(16, 185, 129, 0.3);
+.leaderboard-row.top-three .score-badge {
+  background: #ffa116;
+  color: #1a1a1a;
 }
 
 /* Empty State */
 .leaderboard-empty {
-  padding: 36px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  gap: 16px;
   text-align: center;
-  color: rgba(255, 255, 255, 0.4);
-  font-size: 13px;
-  font-style: italic;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px dashed rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  margin-top: 8px;
-  backdrop-filter: blur(5px);
 }
 
-.leaderboard-empty::before {
-  content: '📊';
-  display: block;
-  font-size: 28px;
-  margin-bottom: 10px;
+.leaderboard-empty svg {
+  color: #3a3a3a;
   opacity: 0.5;
 }
 
-/* Elegant Animations */
-@keyframes slideInRight {
-  from {
-    opacity: 0;
-    transform: translateX(-20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
+.leaderboard-empty p {
+  font-size: 16px;
+  font-weight: 600;
+  color: #666;
+  margin: 0;
 }
 
-.leaderboard-row {
-  animation: slideInRight 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+.leaderboard-empty span {
+  font-size: 13px;
+  color: #555;
 }
 
 /* Responsive Design */
 @media (max-width: 768px) {
-  .leaderboard h2 {
-    font-size: 12px;
+  .leaderboard-header {
+    padding: 16px;
   }
 
-  .leaderboard-header {
-    padding: 9px 12px;
-    font-size: 10px;
-    grid-template-columns: 40px 1fr 60px;
+  .leaderboard-title h2 {
+    font-size: 15px;
   }
 
   .leaderboard-row {
-    padding: 10px 12px;
-    font-size: 12px;
-    grid-template-columns: 40px 1fr 60px;
+    padding: 10px;
   }
 
-  .leaderboard-row .rank {
+  .rank-column {
+    width: 36px;
+  }
+
+  .rank-number {
     width: 28px;
     height: 28px;
-    font-size: 11px;
+    font-size: 13px;
   }
 
-  .leaderboard-row .solved {
-    padding: 4px 8px;
-    font-size: 11px;
+  .medal {
+    font-size: 20px;
+  }
+
+  .username {
+    font-size: 13px;
+  }
+
+  .score-badge {
+    min-width: 28px;
+    height: 24px;
+    font-size: 12px;
+    padding: 0 8px;
   }
 }
