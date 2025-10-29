@@ -38,16 +38,16 @@ A full-stack coding contest platform with multi-language execution in Docker, li
 ### One-command startup
 
 Windows (PowerShell):
-```powershell
+   ```powershell
 ./build-and-run.bat
 ```
 
 Linux/Mac:
-```bash
-chmod +x build-and-run.sh
-./build-and-run.sh
-```
-
+   ```bash
+   chmod +x build-and-run.sh
+   ./build-and-run.sh
+   ```
+   
 These scripts will:
 - Build the judge image: `backend/judge/Dockerfile` → `shodh-judge`
 - Start MongoDB, Backend, and Frontend via `docker-compose up --build -d`
@@ -55,14 +55,14 @@ These scripts will:
 ### Manual startup
 
 1) Build the judge image
-```bash
-docker build -t shodh-judge -f backend/judge/Dockerfile backend/judge/
+   ```bash
+   docker build -t shodh-judge -f backend/judge/Dockerfile backend/judge/
 ```
-
+   
 2) Start stack
 ```bash
-docker-compose up --build -d
-```
+   docker-compose up --build -d
+   ```
 
 3) Open the app
 - Frontend: http://localhost:3000
@@ -124,6 +124,26 @@ MongoDB:
 - The status section shows result per test case. The leaderboard aggregates accepted submissions.
 - Changing the problem resets the editor to a template. Switching language with custom code prompts a styled confirmation dialog.
 
+### Manual test plan (quick checks)
+- Create or use the seeded contest and open a problem.
+- Submit correct and incorrect solutions in Python and C++; observe per-test results and final status.
+- Verify leaderboard updates after an accepted submission.
+- Switch problem: editor resets to the language template.
+- Type custom code, switch language: styled warning dialog appears; Cancel preserves code, Continue resets.
+
+## Screenshots
+
+Place screenshots in `public/screenshots/` and they will be served statically. Suggested shots:
+
+![Home / Contest List](public/screenshots/home.png)
+![Problem + Editor](public/screenshots/editor.png)
+![Leaderboard](public/screenshots/leaderboard.png)
+
+Tips
+- Prefer 1280×720 or similar, light/dark mode both acceptable.
+- Blur or omit any sensitive data (emails, tokens, IDs).
+- Keep filenames lowercase, hyphenated if needed.
+
 ## API overview
 
 - `GET /api/contests`
@@ -135,6 +155,26 @@ MongoDB:
 - `GET /api/contests/:contestId/leaderboard`
 
 Responses include submission status, output, error, execution time, and per-test results when available.
+
+### Data models
+
+User
+- email (unique), username (unique), password (hashed), createdAt
+
+Contest
+- shortId (number), title, description, startTime, endTime, createdAt
+
+Problem
+- contestId (ObjectId), title, description, inputFormat, outputFormat, constraints
+- examples: { input, output }[]
+- testCases: { input, output }[]
+- createdAt
+
+Submission
+- contestId, problemId, username, code, language
+- status: pending | accepted | wrong_answer | runtime_error | compilation_error | time_limit_exceeded | unsupported_language
+- output, error, executionTime, memoryUsed
+- testCaseResults: { input, expectedOutput, actualOutput, passed, executionTime }[]
 
 ## Managing services
 
@@ -172,6 +212,37 @@ docker-compose restart
 - C++ "Permission denied" for `/tmp/solution`: ensured by backend to run containers with `--tmpfs /tmp:rw,exec,mode=1777,size=100m`.
 - Mongo connection: verify URI and service health (`docker-compose logs mongo`).
 - Frontend cannot reach API: set `REACT_APP_API_URL` or `NEXT_PUBLIC_API_URL`, check network and CORS.
+
+### Docker Hub pulls fail behind proxy (EOF / token fetch errors)
+
+On some networks, pulling base images (e.g., `openjdk:17-jdk-slim`) may fail with EOF or "failed to fetch anonymous token".
+
+Try one or more of the following on the affected machine:
+
+1) Confirm issue directly
+```bash
+docker pull openjdk:17-jdk-slim
+```
+
+2) If using Docker Desktop, temporarily disable the proxy
+- Docker Desktop → Settings → Resources → Proxies → disable HTTP/HTTPS Proxy → Apply & Restart
+
+3) If you must use a corporate proxy
+- Allow-list: `registry-1.docker.io`, `auth.docker.io`, `production.cloudflare.docker.com`
+- Optionally set a registry mirror (Settings → Docker Engine):
+```json
+{
+  "registry-mirrors": ["https://<your-corp-mirror>"]
+}
+```
+
+4) DNS fallback
+- Set Docker Engine DNS (Settings → Docker Engine): `"dns": ["8.8.8.8", "1.1.1.1"]`
+
+5) Alternative base image for the judge
+- Edit `backend/judge/Dockerfile`:
+  - Replace `FROM openjdk:17-jdk-slim` with `FROM eclipse-temurin:17-jdk-jammy` (or `eclipse-temurin:17-jdk-alpine`)
+- Rebuild: `docker build -t shodh-judge -f backend/judge/Dockerfile backend/judge/`
 
 ## Security notes (production hardening)
 
