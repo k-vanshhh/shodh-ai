@@ -122,7 +122,7 @@ function ContestPage({ data, onLeave }) {
           className="leave-btn"
           aria-label="Leave contest"
         >
-          Finish Contest
+          Finish
         </button>
       </header>
 
@@ -177,7 +177,7 @@ function ContestPage({ data, onLeave }) {
         <div className="modal-overlay" role="dialog" aria-modal="true">
           <div className="modal-dialog">
             <div className="modal-header">
-              <span className="modal-title">Finish Contest?</span>
+              <span className="modal-title">Finish?</span>
             </div>
             <div className="modal-body">
               You have an active contest session. Are you sure you want to end test?. All unsaved progress will be lost.
