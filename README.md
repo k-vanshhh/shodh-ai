@@ -1,302 +1,192 @@
 # Shodh-a-Code Contest Platform
 
-A comprehensive full-stack coding contest platform featuring real-time code execution, live leaderboards, and a containerized judge system.
+A full-stack coding contest platform with multi-language execution in Docker, live leaderboards, and a clean contest UI.
 
 ## Features
 
-- **Contest Management**: Create and manage coding contests with multiple problems
-- **Live Code Execution**: Execute user-submitted Java code in isolated Docker containers
-- **Real-time Leaderboard**: Live rankings updated as submissions are processed
-- **Asynchronous Processing**: Non-blocking submission handling with status polling
-- **Resource Limits**: Enforce time and memory limits on code execution
-- **Test Case Validation**: Comprehensive test case evaluation
+- **Contest management**: Contests with problems, examples, and test cases
+- **Multi-language judge**: Java, Python, C++ (g++), JavaScript (Node), Go
+- **Container isolation**: Each test runs in a Docker container with CPU/memory limits
+- **Read-only root FS**: Exec-enabled tmpfs for safe binary execution
+- **Asynchronous submissions**: Background execution with status polling
+- **Live leaderboard**: Aggregated per-contest standings
+- **Editor UX**: Language templates, reset on problem change, and a styled confirm dialog when switching languages that would clear code
 
 ## Architecture
 
 ### Backend (Node.js + Express)
-- **REST API**: RESTful endpoints for contests, problems, and submissions
-- **Database**: MongoDB for persistent data storage
-- **Code Execution**: Child process-based Java execution with timeout enforcement
-- **Async Processing**: Asynchronous submission handling with status tracking
+- REST API for contests, problems, and submissions
+- MongoDB for persistence
+- Docker-based code execution via a dedicated judge image (`shodh-judge`)
+- Submissions run per-test-case with per-case status and timing
 
-### Frontend (React + JavaScript)
-- **Contest UI**: Join contests and solve problems
-- **Code Editor**: Write and submit Java solutions
-- **Status Polling**: Real-time submission status updates (2-3 second intervals)
-- **Live Leaderboard**: Periodic leaderboard updates (20 second intervals)
+### Frontend (React)
+- Problem view, code editor, and leaderboard
+- Language selector (Python/C++) with in-app confirmation dialog on destructive switch
+- Status polling for submissions and display of per-test results
 
 ### DevOps
-- **Docker Compose**: Single-command deployment
-- **MongoDB**: Containerized NoSQL database
-- **Node.js Backend**: Containerized Express server
+- Docker Compose for orchestration (frontend, backend, mongo)
+- Backend container needs access to the host Docker daemon (mounted docker.sock) to run the judge containers
 
-## Setup Instructions
+## Quick Start
 
 ### Prerequisites
-- **Docker Desktop** (Docker and Docker Compose included)
-- **Git** (optional, if cloning from repository)
+- Docker Desktop (Windows/Mac) or Docker Engine (Linux) with Docker Compose
+- Git (optional)
 
-### Quick Start (Recommended)
+### One-command startup
 
-#### Windows
-1. **Ensure Docker Desktop is running**
-   - Open Docker Desktop application
-   - Wait for it to fully start (whale icon should be steady in system tray)
+Windows (PowerShell):
+```powershell
+./build-and-run.bat
+```
 
-2. **Build and start all services**
-   ```powershell
-   .\build-and-run.bat
-   ```
-   
-   Or manually:
-   ```powershell
-   # Build judge image first
-   docker build -t shodh-judge -f backend/judge/Dockerfile backend/judge/
-   
-   # Start all services
-   docker-compose up --build -d
-   ```
+Linux/Mac:
+```bash
+chmod +x build-and-run.sh
+./build-and-run.sh
+```
 
-#### Linux/Mac
-1. **Ensure Docker is running**
-   ```bash
-   docker info
-   ```
+These scripts will:
+- Build the judge image: `backend/judge/Dockerfile` → `shodh-judge`
+- Start MongoDB, Backend, and Frontend via `docker-compose up --build -d`
 
-2. **Build and start all services**
-   ```bash
-   chmod +x build-and-run.sh
-   ./build-and-run.sh
-   ```
-   
-   Or manually:
-   ```bash
-   # Build judge image first
-   docker build -t shodh-judge -f backend/judge/Dockerfile backend/judge/
-   
-   # Start all services
-   docker-compose up --build -d
-   ```
+### Manual startup
 
-3. **Access the application**
-   - 🌐 **Frontend**: http://localhost:3000
-   - 🔧 **Backend API**: http://localhost:5000
-   - 🗄️ **MongoDB**: localhost:27017
+1) Build the judge image
+```bash
+docker build -t shodh-judge -f backend/judge/Dockerfile backend/judge/
+```
 
-### Managing Services
+2) Start stack
+```bash
+docker-compose up --build -d
+```
 
-**View logs:**
+3) Open the app
+- Frontend: http://localhost:3000
+- Backend API: http://localhost:5000
+- MongoDB: localhost:27017
+
+## Configuration
+
+### Environment variables
+
+Backend (set via compose; use a `.env` when running locally):
+- `MONGODB_URI`: connection string for MongoDB
+- `PORT`: default `5000`
+- `NODE_ENV`: e.g., `production`
+- `JWT_SECRET`: secret for auth tokens (set this yourself when not using compose defaults)
+
+Frontend:
+- API URL env is optional. The UI tries, in order: `apiUrl` prop → `NEXT_PUBLIC_API_URL` → `http://localhost:5000`.
+- In compose we set `REACT_APP_API_URL` to `http://localhost:5000` which still works because the UI also accepts an explicit prop and has a fallback.
+
+Judge runtime (internal):
+- Backend runs judge containers with `--read-only` and a tmpfs mount for `/tmp` as `rw,exec,mode=1777,size=100m` so compiled artifacts (e.g., C++/Go) can execute.
+
+### Data and seeding
+- On first backend start, the database is auto-seeded with a sample contest and problems (see `backend/server.js`).
+
+## Local development (without full Docker stack)
+
+You can run the frontend and backend locally, but the backend still requires access to Docker (to spin up the judge containers).
+
+Backend:
+```bash
+cd backend
+npm install
+npm start
+```
+
+Frontend:
+```bash
+cd frontend
+npm install
+npm start
+```
+
+Set the API URL for the frontend if needed:
+```bash
+# Create .env in frontend/ if desired
+REACT_APP_API_URL=http://localhost:5000
+# or NEXT_PUBLIC_API_URL=http://localhost:5000
+```
+
+MongoDB:
+- Use a local Mongo instance or point `MONGODB_URI` to a remote cluster.
+
+## Using the app
+
+- Open the frontend, join a contest, select a problem.
+- Choose a language and write code. Submitting runs your code against the problem’s test cases in containers.
+- The status section shows result per test case. The leaderboard aggregates accepted submissions.
+- Changing the problem resets the editor to a template. Switching language with custom code prompts a styled confirmation dialog.
+
+## API overview
+
+- `GET /api/contests`
+- `GET /api/contests/:id`
+- `GET /api/contests/:contestId/problems`
+- `GET /api/problems/:id`
+- `POST /api/submissions` → `{ contestId, problemId, username, code, language }`
+- `GET /api/submissions/:id`
+- `GET /api/contests/:contestId/leaderboard`
+
+Responses include submission status, output, error, execution time, and per-test results when available.
+
+## Managing services
+
+View logs:
 ```bash
 docker-compose logs -f
 ```
 
-**View specific service logs:**
+Service-specific logs:
 ```bash
 docker-compose logs -f backend
 docker-compose logs -f frontend
 docker-compose logs -f mongo
 ```
 
-**Stop all services:**
+Stop:
 ```bash
 docker-compose down
 ```
 
-**Stop and remove volumes (clean reset):**
+Stop and remove volumes (clean reset):
 ```bash
 docker-compose down -v
 ```
 
-**Restart services:**
+Restart:
 ```bash
 docker-compose restart
 ```
 
-### Manual Setup (Without Docker)
-
-#### Backend Setup
-\`\`\`bash
-cd backend
-npm install
-npm start
-\`\`\`
-
-#### Frontend Setup
-\`\`\`bash
-cd frontend
-npm install
-npm start
-\`\`\`
-
-#### Database Setup
-- Install MongoDB locally
-- Update `MONGODB_URI` in backend `.env` file
-- Database will auto-seed on first run
-
-## API Design
-
-### Endpoints
-
-#### Get All Contests
-\`\`\`
-GET /api/contests
-Response: [
-  {
-    "_id": "...",
-    "title": "Shodh-a-Code Contest 1",
-    "description": "...",
-    "startTime": "...",
-    "endTime": "..."
-  }
-]
-\`\`\`
-
-#### Get Contest Details
-\`\`\`
-GET /api/contests/{contestId}
-Response: {
-  "_id": "...",
-  "title": "Shodh-a-Code Contest 1",
-  "description": "...",
-  "startTime": "...",
-  "endTime": "..."
-}
-\`\`\`
-
-#### Get Problems for Contest
-\`\`\`
-GET /api/contests/{contestId}/problems
-Response: [
-  {
-    "_id": "...",
-    "title": "Sum of Two Numbers",
-    "description": "...",
-    "examples": [...],
-    "testCases": [...]
-  }
-]
-\`\`\`
-
-#### Submit Code
-\`\`\`
-POST /api/submissions
-Request: {
-  "contestId": "...",
-  "problemId": "...",
-  "username": "john_doe",
-  "code": "public class Solution { ... }",
-  "language": "java"
-}
-Response: {
-  "_id": "...",
-  "status": "pending",
-  "createdAt": "..."
-}
-\`\`\`
-
-#### Get Submission Status
-\`\`\`
-GET /api/submissions/{submissionId}
-Response: {
-  "_id": "...",
-  "status": "accepted",
-  "output": "...",
-  "error": "",
-  "executionTime": 150
-}
-\`\`\`
-
-#### Get Leaderboard
-\`\`\`
-GET /api/contests/{contestId}/leaderboard
-Response: [
-  {
-    "username": "john_doe",
-    "solved": 2,
-    "totalTime": 45000,
-    "submissions": [...]
-  }
-]
-\`\`\`
-
-## Design Choices & Justification
-
-### Backend Architecture
-- **Express.js**: Lightweight and flexible Node.js framework
-- **MongoDB**: NoSQL database for flexible schema and easy scaling
-- **Child Process**: Direct Java execution for simplicity and control
-- **Async Processing**: Non-blocking submission handling with status tracking
-
-### Code Execution
-- **Child Process**: Uses Node.js `spawn` to execute Java code
-- **Timeout Enforcement**: 5-second timeout per execution
-- **Test Case Validation**: Compares normalized output with expected results
-- **Error Handling**: Captures compilation and runtime errors
-
-### Frontend Architecture
-- **React**: Component-based UI with hooks for state management
-- **Polling**: Status polling (2-3s) and leaderboard polling (20s) for real-time updates
-- **CSS Styling**: Custom CSS with gradient design and responsive layout
-- **Component Composition**: Modular components for problem view, editor, and leaderboard
-
-### Key Challenges & Trade-offs
-
-1. **Code Execution Safety**
-   - Challenge: Safely executing untrusted user code
-   - Solution: Timeout enforcement and error handling
-   - Trade-off: Limited resource isolation compared to Docker
-
-2. **Asynchronous Processing**
-   - Challenge: Keeping UI in sync with backend state
-   - Solution: Polling mechanism with configurable intervals
-   - Trade-off: Polling creates network overhead; WebSockets could be more efficient
-
-3. **Test Case Management**
-   - Challenge: Validating output with exact string matching
-   - Solution: Trim whitespace and compare normalized output
-   - Trade-off: May fail on formatting-sensitive problems
-
-## Sample Contest Data
-
-The application pre-populates with:
-- **Contest**: "Shodh-a-Code Contest 1"
-- **Problems**:
-  1. Sum of Two Numbers
-  2. Calculate Factorial
-  3. Check Palindrome
-
-Access with Contest ID: `1` (use the MongoDB ObjectId from the database)
-
 ## Troubleshooting
 
-### Docker Connection Issues
-- Ensure Docker daemon is running
-- Check Docker Compose status: `docker-compose ps`
+- Docker not running: ensure Docker Desktop/Engine is up (`docker info`).
+- Backend cannot run judge: the backend container must mount `/var/run/docker.sock` and typically needs `privileged: true` in `docker-compose.yml` as provided.
+- C++ "Permission denied" for `/tmp/solution`: ensured by backend to run containers with `--tmpfs /tmp:rw,exec,mode=1777,size=100m`.
+- Mongo connection: verify URI and service health (`docker-compose logs mongo`).
+- Frontend cannot reach API: set `REACT_APP_API_URL` or `NEXT_PUBLIC_API_URL`, check network and CORS.
 
-### MongoDB Connection Errors
-- Verify MongoDB is running: `docker-compose logs mongo`
-- Check credentials in `.env` file
+## Security notes (production hardening)
 
-### Submission Failures
-- Check backend logs: `docker-compose logs backend`
-- Verify Java is available in the container
-- Check problem test cases are properly formatted
+- Avoid exposing Docker socket to untrusted code in production; consider a sandbox runner on a dedicated host/VM.
+- Remove `privileged: true` and tighten container capabilities if you separate the runner.
+- Store secrets (`JWT_SECRET`, DB credentials) outside source and compose files (use a secrets manager).
 
-### Frontend Not Loading
-- Verify backend is running: `curl http://localhost:5000/api/contests`
-- Check browser console for API errors
-- Ensure `REACT_APP_API_URL` is set correctly
+## Scripts
 
-## Future Enhancements
+- `build-and-run.sh` / `build-and-run.bat`: Builds judge and starts the stack.
+- Common `docker-compose` commands:
+  - `docker-compose up --build -d`
+  - `docker-compose logs -f` (or `-f backend`/`frontend`/`mongo`)
+  - `docker-compose down` (add `-v` to wipe volumes)
 
-- Support for multiple programming languages (Python, C++, JavaScript)
-- WebSocket integration for real-time updates
-- Advanced test case management with hidden test cases
-- User authentication and authorization
-- Problem difficulty ratings and categories
-- Submission history and analytics
-- Docker-based code execution for better isolation
-\`\`\`
+## License
 
-```typescriptreact file="frontend/app/page.tsx" isDeleted="true"
-...deleted...
+MIT
