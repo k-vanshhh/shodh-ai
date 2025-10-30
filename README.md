@@ -133,9 +133,16 @@ MongoDB:
 
 ## Screenshots
 
+### Home Page
 
 ![Home / Contest List](public/screenshots/home.png)
+
+### Code Editor 
+
 ![Problem + Editor](public/screenshots/editor.png)
+
+### Live Leaderboard
+
 ![Leaderboard](public/screenshots/leaderboard.png)
 
 
